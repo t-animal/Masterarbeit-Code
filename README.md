@@ -5,3 +5,8 @@
 
 ## Gensim installieren
 In ein virtualenv mit `pip install --upgrade gensim`
+
+
+## Zitate:
+* gensim: https://radimrehurek.com/gensim/about.html
+* sciki-learn : http://scikit-learn.org/stable/about.html#citing-scikit-learn

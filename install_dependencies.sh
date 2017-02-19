@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e 
+set -e
 
 confirm() {
     while true; do
@@ -13,8 +13,21 @@ confirm() {
     done
 }
 
+
+install_package() {
+	version=$(pip freeze | grep "$1" | cut -d"=" -f 3)
+	upstream=$(wget -qO- https://pypi.python.org/pypi/$1/json | grep -E ' {8}"[0-9."]*": \[' | sort -V | tail -n 1 | tr -d ' ":[')
+	if [[ "$version" == "" ]]; then
+		pip install "$1"
+	else
+		if confirm "$1 (v$version) is already installed. Upgrade (upstream is v$upstream)? (yN)" N; then
+			pip install --upgrade "$1"
+		fi
+	fi
+}
+
 if [[ ! -d venv ]]; then
-	virtualenv venv
+	virtualenv --system-site-packages venv
 else
 	echo Virtualenv existiert bereits.
 fi
@@ -22,13 +35,12 @@ fi
 if [[ -r venv/bin/activate ]]; then
 	source venv/bin/activate
 
-	if [[ "$(pip freeze | grep gensim)" == "" ]]; then
-		pip install gensim
-	else
-		if confirm "Gensim is already installed. Upgrade? (yN)" N; then
-			pip install --upgrade gensim
-		fi
-	fi
+	#can't hurt to upgrade pip first
+	pip install --upgrade pip
+
+	install_package gensim
+	install_package scikit-learn
+	install_package matplotlib
 
 else
 	echo Cannot source virtualenv activation file!
