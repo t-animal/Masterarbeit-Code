@@ -28,23 +28,28 @@ class WikiIterator():
 		return self.texts.next()
 
 
-def main(corpusPath, modelPath, overwrite=False):
+def main(corpusPath, modelPath, overwrite=False, loadCorpus=False):
 	log.info("Started application")
 
 	if modelPath is None:
 		modelPath = datetime.now().strftime("data/model--%Y-%m-%d--%H:%M:%S")
 
 	log.info("Loading corpus")
-	corpus = g.corpora.wikicorpus.WikiCorpus(corpusPath)
+	if not loadCorpus:
+		corpus = g.corpora.wikicorpus.WikiCorpus(corpusPath)
+		corpus.save(corpusPath+"-precomputed")
+	else:
+		corpus = g.corpora.wikicorpus.WikiCorpus.load(corpusPath)
 
-	log.info("Training model")
-	model = g.models.Word2Vec(min_count=1)
 
 	newPath = ""
 	while os.path.exists(modelPath) and not overwrite and not newPath == "overwrite":
 		newPath = input("Path '{}' exists. Please enter a different path or 'overwrite': ".format(modelPath))
 		if not newPath == "overwrite":
 			modelPath = newPath
+
+	log.info("Training model")
+	model = g.models.Word2Vec(WikiIterator(corpus), min_count=1)
 
 	log.info("Saving model")
 	model.save(modelPath)
@@ -56,10 +61,11 @@ if __name__ == "__main__":
 	import argparse
 
 	parser = argparse.ArgumentParser(description='Train a word2vec model on a wikipedia corpus and save it to disc')
-	parser.add_argument("-f", "--forceOverwrite", help="Force overwriting of existing model files", action="store_true")
+	parser.add_argument("--force", help="Force overwriting of existing model files", action="store_true")
 	parser.add_argument("-v", help="Be more verbose", action="store_true")
 	parser.add_argument("--modelPath", help="Where to save the word2vec model", default=None)
-	parser.add_argument("corpusPath", help="Path to the wikipedia corpus to learn from")
+	parser.add_argument("--loadCorpus", help="Load the corpus instead of creating it from scratch", action="store_true")
+	parser.add_argument("corpusPath", help="Path to the wikipedia corpus to learn from.")
 
 	args = parser.parse_args()
 
@@ -67,6 +73,6 @@ if __name__ == "__main__":
 					level=log.INFO if args.v else log.WARNING)
 
 	try:
-		main(args.corpusPath, args.modelPath, args.forceOverwrite)
+		main(args.corpusPath, args.modelPath, args.force, args.loadCorpus)
 	except KeyboardInterrupt:
 		pass
