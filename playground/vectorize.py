@@ -52,7 +52,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Vectorize text document(s)')
 	parser.add_argument("--model", help="Path to word2vec model")
 	parser.add_argument("-v", help="Be more verbose", action="store_true")
-	parser.add_argument("filenames", help="Path to roster document(s) to vectorize", nargs="+")
+	parser.add_argument("filenames", help="Path to document(s) to vectorize", nargs="+")
 
 	args = parser.parse_args()
 
