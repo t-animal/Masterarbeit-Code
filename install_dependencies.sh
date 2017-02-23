@@ -27,7 +27,7 @@ install_package() {
 }
 
 if [[ ! -d venv ]]; then
-	virtualenv --system-site-packages venv
+	virtualenv -p python3 --system-site-packages venv
 else
 	echo Virtualenv existiert bereits.
 fi
