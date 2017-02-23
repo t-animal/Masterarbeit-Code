@@ -21,6 +21,7 @@ except ImportError:
 from sklearn import svm as SVM
 from pprint import pprint
 from gensim.models import Word2Vec
+from util.LazyModel import LazyModel
 
 def getVectorSum(filename, model, modelPath=None):
 	cachePath = os.path.split(filename)
@@ -57,8 +58,13 @@ def getVectorSum(filename, model, modelPath=None):
 
 	return fileSum
 
-		log.info("Loaded model")
+def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
+	log.info("Started application")
 
+	model = LazyModel(Word2Vec.load_word2vec_format, modelPath, binary=True)
+	log.info("Loaded model")
+
+	if trainFilenames:
 		c_vectors = []
 		e_vectors = []
 
