@@ -112,9 +112,15 @@ def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
 		if result.upper() in filename:
 			correct += 1
 
-		log.info("Checked file %s, result %s", filename, result)
+		distance = svm.decision_function([fileSum])[0]
+		log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
+			"CORRECT" if result.upper() in filename else "INCORRECT", distance)
 
 	print("{} of {} correct ({}%)".format(correct, len(testFilenames), correct/len(testFilenames)*100))
+
+	meanAcc = svm.score(c_vectors + e_vectors, ["c"] * len(c_vectors) + ["e"] * len(e_vectors))
+	log.info("Tested with built-in scoring: %s", meanAcc)
+
 
 	for filename in trainFilenames:
 		fileSum = getVectorSum(filename, model)
