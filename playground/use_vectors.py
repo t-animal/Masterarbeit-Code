@@ -9,41 +9,53 @@
 import gensim as g
 import pdb
 import numpy as np
+import os
 import re
 import logging as log
 import traceback, sys, code
-import cPickle as pickle
+try:
+	import cPickle as pickle
+except ImportError:
+	import pickle
 
 from sklearn import svm as SVM
 from pprint import pprint
 from gensim.models import Word2Vec
 
-def getVectorSum(filename, model):
-	with open(filename, "r") as file:
-
-		content = file.read()
-		content = re.sub('[,.-]', '', content)
-
+def getVectorSum(filename, model, modelPath=None):
+	cachePath = os.path.split(filename)
+	cachePath = os.path.join(cachePath[0], "." + cachePath[1] + ".veccache")
+	try:
+		with open(cachePath, "rb") as cacheFile:
+			translatedFile = pickle.load(cacheFile, encoding='latin1')[modelPath]
+			log.debug("loaded vectorized file %s from cache", filename)
+	except Exception:
 		translatedFile = []
 
-		fileSum = np.zeros(300, dtype=np.float32)
+		with open(filename, "r") as file:
 
-		for token in content.lower().split():
-			if token not in model.wv.vocab.keys():
-				log.debug("token '%s' not in vocabulary", token)
-				continue
+			content = file.read()
+			content = re.sub('[,.-]', '', content)
 
-			translatedFile.append((token, model[token]))
-			fileSum += model[token]
+			for token in content.lower().split():
+				if token not in model.wv.vocab.keys():
+					log.debug("token '%s' not in vocabulary", token)
+					continue
 
-		return fileSum
+				translatedFile.append((token, model[token]))
 
-def main(testFilenames, trainFilenames=None, svmPath=None, model=None):
-	log.info("Started application")
+		try:
+			with open(cachePath, "wb") as cacheFile:
+				log.debug("storing vectorized file %s to cache", filename)
+				pickle.dump({modelPath: translatedFile}, cacheFile)
+		except Exception as e:
+			log.warn("Could not store cache: %s", str(e))
 
-	if trainFilenames and model:
+	fileSum = np.zeros(300, dtype=np.float64)
+	for token, vector in translatedFile:
+		fileSum += vector
 
-		model = Word2Vec.load_word2vec_format(model, binary=True)
+	return fileSum
 
 		log.info("Loaded model")
 
