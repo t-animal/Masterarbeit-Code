@@ -21,6 +21,7 @@ except ImportError:
 from sklearn import svm as SVM
 from pprint import pprint
 from gensim.models import Word2Vec
+from util.plot import plotPCA
 from util.LazyModel import LazyModel
 
 def getVectorSum(filename, model, modelPath=None):
@@ -97,8 +98,15 @@ def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
 
 	log.info("Beginning testing")
 	correct = 0.
+	c_vectors = []
+	e_vectors = []
 	for filename in testFilenames:
 		fileSum = getVectorSum(filename, model)
+
+		if "C" in filename:
+			c_vectors.append(fileSum)
+		else:
+			e_vectors.append(fileSum)
 
 		result = svm.predict([fileSum])[0]
 		if result.upper() in filename:
@@ -107,6 +115,17 @@ def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
 		log.info("Checked file %s, result %s", filename, result)
 
 	print("{} of {} correct ({}%)".format(correct, len(testFilenames), correct/len(testFilenames)*100))
+
+	for filename in trainFilenames:
+		fileSum = getVectorSum(filename, model)
+
+		if "C" in filename:
+			c_vectors.append(fileSum)
+		else:
+			e_vectors.append(fileSum)
+
+	plotPCA(c_vectors, e_vectors, "c", "e", 3)
+
 	log.info("Finished")
 
 
