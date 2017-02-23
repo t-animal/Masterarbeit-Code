@@ -86,22 +86,23 @@ def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
 		svm.fit(c_vectors + e_vectors, ["c"] * len(c_vectors) + ["e"] * len(e_vectors))
 
 		if svmPath:
-			with open(svmPath, "w") as persistanceFile:
+			with open(svmPath, "wb") as persistanceFile:
 				pickle.dump(svm, persistanceFile)
 	elif svmPath:
-		with open(svmPath, "r") as persistanceFile:
-			svm = pickle.load(persistanceFile)
+		log.info("Loading SVM from pickled file")
+		with open(svmPath, "rb") as persistanceFile:
+			svm = pickle.load(persistanceFile, encoding='latin1')
 	else:
 		raise ValueError("Either svmPath or trainFilenames and model must be supplied")
 
 	log.info("Beginning testing")
-	correct = 0
+	correct = 0.
 	for filename in testFilenames:
 		fileSum = getVectorSum(filename, model)
 
 		result = svm.predict([fileSum])[0]
 		if result.upper() in filename:
-			correct+=1
+			correct += 1
 
 		log.info("Checked file %s, result %s", filename, result)
 
