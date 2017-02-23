@@ -141,16 +141,22 @@ if __name__ == "__main__":
 	import argparse
 
 	parser = argparse.ArgumentParser(description='Vectorize text document(s)')
-	parser.add_argument("--modelPath", help="Path to word2vec model (defaults to ./data/GoogleNews-vectors-negative300.bin)", default="./data/GoogleNews-vectors-negative300.bin")
+	parser.add_argument("--modelPath", help="Path to word2vec model", required=True)
 	parser.add_argument("--svmPath", help="Path to load the svm from if no trainFilenames are given or store it to if trainFilenames are given")
-	parser.add_argument("-v", help="Be more verbose", action="store_true")
+	parser.add_argument("-v", help="Be more verbose", action="count", default=0)
 	parser.add_argument("--trainFilenames", help="Path to document(s) to train from", nargs="*")
-	parser.add_argument("--testFilenames", help="Path to document(s) to test against", nargs="+")
+	parser.add_argument("--testFilenames", help="Path to document(s) to test against", nargs="+", required=True)
 
 	args = parser.parse_args()
 
+	if not args.svmPath and ( not args.trainFilenames or not args.modelPath):
+		parser.error("Supply either an svmPath or training files and a model")
+
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-	                level=log.INFO if args.v else log.WARNING)
+	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
+
+	if bool(args.modelPath) ^ bool(args.trainFilenames) and not args.svmPath:
+		log.warning("Training files supplied but no model (or vice versa) won't be able to train")
 
 	try:
 		if args.modelPath:
