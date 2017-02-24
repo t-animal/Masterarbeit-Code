@@ -38,7 +38,7 @@ def getVectorSum(filename, model, modelPath=None):
 		with open(filename, "r") as file:
 
 			content = file.read()
-			content = re.sub('[,.-]', '', content)
+			content = re.sub('[.,:;!?…=\'"`´‘’“”„#%\\()/*+-]', ' ', content)
 
 			for token in content.lower().split():
 				if token not in model.wv.vocab.keys():
@@ -88,7 +88,7 @@ def main(testFilenames, trainFilenames=None, svmPath=None, modelPath=None):
 			log.info("Finished with file %s", filename)
 
 
-		svm = SVM.SVC()
+		svm = SVM.SVC(probability=True)
 		log.info("Start training svm")
 		svm.fit(c_vectors + e_vectors, ["c"] * len(c_vectors) + ["e"] * len(e_vectors))
 
