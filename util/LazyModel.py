@@ -1,15 +1,14 @@
 import logging
 log = logging.getLogger("de.t_animal.MA.util.LazyModel")
 
-"""
-	This is a wrapper around gensim model which only instantiates the wrapped
-	model if (and only if) it is subscripted ([]) or a property is accessed
-	(useful in conjunction with caches).
-	After instantiating it, this class's object "morphs" into an object of
-	the wrapped class (i.e. it casts itself and replaces its datastructures).
-"""
-
 class LazyModel():
+	"""
+		This is a wrapper around gensim model which only instantiates the wrapped
+		model if (and only if) it is subscripted ([]) or a property is accessed
+		(useful in conjunction with caches).
+		After instantiating it, this class's object "morphs" into an object of
+		the wrapped class (i.e. it casts itself and replaces its datastructures).
+	"""
 
 	def __init__(self, modelConstructor, *args, **kwargs):
 		"""
