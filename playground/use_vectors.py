@@ -21,6 +21,7 @@ except ImportError:
 from sklearn import svm as SVM
 from pprint import pprint
 from gensim.models import Word2Vec
+from util import softmax
 from util.plot import plotPCA
 from util.LazyModel import LazyModel
 
@@ -56,6 +57,11 @@ def getVectorSum(filename, model, modelPath=None):
 	fileSum = np.zeros(300, dtype=np.float64)
 	for token, vector in translatedFile:
 		fileSum += vector
+
+	fileSum **= 3
+
+	# fileSum = softmax(fileSum)
+	fileSum /= len(translatedFile)
 
 	return fileSum
 
