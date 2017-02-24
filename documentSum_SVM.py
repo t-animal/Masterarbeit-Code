@@ -11,7 +11,7 @@ from sklearn import svm as SVM
 from gensim.models import Word2Vec
 from util import softmax, isAroused
 from util.plot import plotPCA
-from util.LazyModel import LazyModel
+from util.containers import LazyModel, TestresultContainer
 
 class DocSumSVMClassifier():
 	""" A very simple classifier: It vectorizes a file, averages up all word vectors
@@ -75,50 +75,30 @@ class DocSumSVMClassifier():
 
 		   :param trainFilenames: The filenames to train upon
 		   :type trainFilenames: iterable of strings
-		   :returns: a results dict
+		   :returns: a TestresultContainer object
 		   :raises RuntimeError: if no svm was trained or loaded
 		"""
 		if self.svm is None:
 			raise RuntimeError("Call train or load before calling test!")
 
 		log.info("Beginning testing")
-		correct = 0
-		correctAroused = 0
-		totalAroused = 0
-		distances = {}
+		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
+
 		for filename in testFilenames:
 			fileSum = self._getDocumentSum(filename)
 
 			result = self.svm.predict([fileSum])[0]
-			if bool(result) == isAroused(filename):
-				correct += 1
-				if isAroused(filename):
-					correctAroused += 1
-
-			if isAroused(filename):
-				totalAroused += 1
+			testResult.addResult(bool(result), isAroused(filename))
 
 			distance = self.svm.decision_function([fileSum])[0]
-			distances[filename] = distance
+			testResult.additional(distances = {filename: distance})
 
 			log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
 			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT", distance)
 
-		log.info("Finished testing: %s correct out of %s (%s%%)", correct, len(testFilenames), float(correct)/len(testFilenames)*100)
+		log.info("Finished testing: %s", testResult.oneline())
 
-		return {
-			"tested": len(testFilenames),
-			"correct": correct,
-			"correct-percentage": float(correct)/len(testFilenames)*100,
-			"correct-aroused": correctAroused,
-			"correct-nonaroused": correct - correctAroused,
-			"correct-aroused-percentage": float(correctAroused)/totalAroused*100,
-			"correct-nonaroused-percentage": float(correct - correctAroused)/(len(testFilenames)-totalAroused)*100,
-			"incorrect": len(testFilenames) - correct,
-			"incorrect-aroused": totalAroused - correctAroused,
-			"incorrect-nonaroused": len(testFilenames) - correct - (totalAroused - correctAroused),
-			"additional": {"distances": distances}
-		}
+		return testResult
 
 
 	def plot(self, filenames):
@@ -198,8 +178,7 @@ class DocSumSVMClassifier():
 
 if __name__ == "__main__":
 
-	import argparse
-	import json
+	import argparse, sys
 
 	parser = argparse.ArgumentParser(description='Vectorize documents, sum the vectors, pass to SVM for classification')
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
@@ -221,10 +200,15 @@ if __name__ == "__main__":
 			classifier.train(args.train)
 
 		result = classifier.test(args.test)
+
 		if args.human:
-			del result["additional"]
-			print(json.dumps(result, indent=1))
+			if os.isatty(sys.stdout.fileno()):
+				print("\033[1m"+result.oneline()+"\033[0m")
+			else:
+				print(result.oneline())
+			print(result)
 		else:
-			print(json.dumps(result))
+			print(result.getJSON())
+
 	except KeyboardInterrupt:
 		pass
