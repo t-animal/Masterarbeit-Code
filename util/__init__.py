@@ -15,4 +15,7 @@ def isAroused(path):
 	if folder.endswith("Veroff"):
 		return "C" in path
 
+	if folder.endswith("Study_2_PSE_files"):
+		return int(path[-5]) >= 4
+
 	raise ValueError("Unknown path")
