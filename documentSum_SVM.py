@@ -12,19 +12,14 @@ from gensim.models import Word2Vec
 from util import softmax, isAroused
 from util.plot import plotPCA
 from util.containers import LazyModel, TestresultContainer
+from util.classifiers import SVMClassifier
 
-class DocSumSVMClassifier():
+class DocSumSVMClassifier(SVMClassifier):
 	""" A very simple classifier: It vectorizes a file, averages up all word vectors
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath):
-		self.modelPath = modelPath
-		self.model = LazyModel(Word2Vec.load_word2vec_format, modelPath, binary=True)
-		self.svm = None
-
-
-	def _getDocumentSum(self, filename):
+	def _generateDescribingVectors(self, filename):
 		"""Vectorizes a file, averages the vectors
 
 		   :param filename: the file to process
@@ -40,34 +35,7 @@ class DocSumSVMClassifier():
 		fileSum **= 3
 		fileSum /= len(vectorizedFile)
 
-		return fileSum
-
-
-	def train(self, trainFilenames):
-		"""Trains an SVM using the files supplied in trainFilenames.
-
-		   :param trainFilenames: The filenames to train upon
-		   :type trainFilenames: iterable of strings
-		"""
-		log.info("Training SVM from scratch, collecting document sums first")
-		nonArousedVectors = []
-		arousedVectors = []
-
-		for filename in trainFilenames:
-			log.info("Beginning with file %s", filename)
-			fileSum = self._getDocumentSum(filename)
-
-			if isAroused(filename):
-				arousedVectors.append(fileSum)
-			else:
-				nonArousedVectors.append(fileSum)
-
-			log.debug("Vector sum: %s", str(fileSum))
-
-		log.info("Start training svm with document sums")
-		self.svm = SVM.SVC(probability = True)
-		self.svm.fit(nonArousedVectors + arousedVectors,
-		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
+		yield fileSum
 
 
 	def test(self, testFilenames):
@@ -85,7 +53,7 @@ class DocSumSVMClassifier():
 		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
 
 		for filename in testFilenames:
-			fileSum = self._getDocumentSum(filename)
+			fileSum = self._getDescribingVectors(filename)[0]
 
 			result = self.svm.predict([fileSum])[0]
 			testResult.addResult(bool(result), isAroused(filename))
@@ -111,7 +79,7 @@ class DocSumSVMClassifier():
 		arousedVectors = []
 
 		for filename in filenames:
-			fileSum = self._getDocumentSum(filename)
+			fileSum = self._getDescribingVectors(filename)
 
 			if isAroused(filename):
 				arousedVectors.append(fileSum)
@@ -119,61 +87,6 @@ class DocSumSVMClassifier():
 				nonArousedVectors.append(fileSum)
 
 		plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
-
-	def _vectorizeFile(self, filename):
-		""" Opens a file, splits it into words and gets the vectors for each word
-		    that is contained in the model. It caches the results so that subsequent
-		    runs can be faster.
-
-		    :param filename: the filename of the file to vectorize
-		    :type filename: string
-		    :return: a list of tuples (word, vector)
-		 """
-
-		cachePath = os.path.split(filename)
-		cachePath = os.path.join(cachePath[0], "." + cachePath[1] + ".veccache")
-		try:
-			with open(cachePath, "rb") as cacheFile:
-				translatedFile = pickle.load(cacheFile, encoding='latin1')[os.path.realpath(self.modelPath)]
-				log.debug("loaded vectorized file %s from cache", filename)
-
-		except Exception:
-			translatedFile = []
-
-			with open(filename, "r") as file:
-				content = file.read()
-				content = re.sub('[.,:;!?…=\'"`´‘’“”„#%\\()/*+-]', ' ', content)
-
-				for token in content.lower().split():
-					if token not in self.model.wv.vocab.keys():
-						log.debug("token '%s' not in vocabulary", token)
-						continue
-
-					translatedFile.append((token, self.model[token]))
-
-			try:
-				with open(cachePath, "wb") as cacheFile:
-					log.debug("storing vectorized file %s to cache", filename)
-					pickle.dump({os.path.realpath(self.modelPath): translatedFile}, cacheFile)
-			except Exception as e:
-				log.warn("Could not store cache: %s", str(e))
-
-		return translatedFile
-
-
-	def load(self, svmPath):
-		log.info("Loading SVM from pickled file")
-		with open(svmPath, "rb") as persistanceFile:
-			self.svm = pickle.load(persistanceFile, encoding='latin1')
-
-
-	def save(self, svmPath):
-		if self.svm is None:
-			raise RuntimeError("Call train or load before calling save!")
-
-		log.info("Storing SVM to file")
-		with open(svmPath, "wb") as persistanceFile:
-			pickle.dump(self.svm, persistanceFile)
 
 
 if __name__ == "__main__":
