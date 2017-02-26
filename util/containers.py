@@ -2,7 +2,7 @@ import json
 import logging
 import textwrap
 
-log = logging.getLogger("de.t_animal.MA.util.LazyModel")
+log = logging.getLogger("de.t_animal.MA.util.containers")
 
 class LazyModel():
 	"""
