@@ -59,8 +59,10 @@ class TestresultContainer():
 		"""
 		self.correct = 0
 		self.incorrect = 0
-		self.correct_class1 = 0
-		self.incorrect_class1 = 0
+		self.true_pos_class1 = 0
+		self.false_pos_class1 = 0
+		self.true_pos_class2 = 0
+		self.false_pos_class2 = 0
 
 		self.class1 = class1
 		self.class2 = class2
@@ -83,12 +85,16 @@ class TestresultContainer():
 			self.correct += 1
 
 			if expectedClass == self.class1:
-				self.correct_class1 += 1
+				self.true_pos_class1 += 1
+			else:
+				self.true_pos_class2 += 1
 		else:
 			self.incorrect += 1
 
-			if expectedClass == self.class1:
-				self.incorrect_class1 += 1
+			if resultingClass == self.class1:
+				self.false_pos_class1 += 1
+			else:
+				self.false_pos_class2 += 1
 
 
 	def additional(self, **kwargs):
@@ -116,23 +122,35 @@ class TestresultContainer():
 	def getDict(self):
 		""" Returns a dict with information about the results. """
 		total = self.correct + self.incorrect
+		total_class1 = self.true_pos_class1 + self.false_pos_class2
+		total_class2 = self.true_pos_class2 + self.false_pos_class1
 		correct_percentage = float(self.correct) / total * 100
-		correct_class2 = self.correct - self.correct_class1
-		incorrect_class2 = self.incorrect - self.incorrect_class1
-		correct_class1_percentage = 100 * float(self.correct_class1) / (self.correct_class1 + self.incorrect_class1)
-		correct_class2_percentage = 100 * float(correct_class2) / (incorrect_class2 + correct_class2)
+		try:
+			true_pos_class1_percentage = 100 * float(self.true_pos_class1) / total_class1
+			false_pos_class1_percentage = 100 * float(self.false_pos_class1) / total_class1
+		except ZeroDivisionError:
+			true_pos_class1_percentage = None
+		try:
+			true_pos_class2_percentage = 100 * float(self.true_pos_class2) / total_class2
+			false_pos_class2_percentage = 100 * float(self.false_pos_class2) / total_class2
+		except ZeroDivisionError:
+			true_pos_class2_percentage = None
 
 		return {
 			"tested": total,
+			"tested-" + self.label1: total_class1,
+			"tested-" + self.label2: total_class2,
 			"correct": self.correct,
 			"correct-percentage": correct_percentage,
-			"correct-" + self.label1: self.correct_class1,
-			"correct-" + self.label2: correct_class2,
-			"correct-" + self.label1 + "-percentage": correct_class1_percentage,
-			"correct-" + self.label2 + "-percentage": correct_class2_percentage,
+			"true-positive-" + self.label1: self.true_pos_class1,
+			"true-positive-" + self.label2: self.true_pos_class2,
+			"true-positive-" + self.label1 + "-percentage": true_pos_class1_percentage,
+			"true-positive-" + self.label2 + "-percentage": true_pos_class2_percentage,
 			"incorrect": self.incorrect,
-			"incorrect-" + self.label1: self.incorrect_class1,
-			"incorrect-" + self.label2: incorrect_class2,
+			"false-positive-" + self.label1: self.false_pos_class1,
+			"false-positive-" + self.label2: self.false_pos_class2,
+			"false-positive-" + self.label1 + "-percentage": false_pos_class1_percentage,
+			"false-positive-" + self.label2 + "-percentage": false_pos_class2_percentage,
 			"additional": self.additionalData
 		}
 
@@ -151,23 +169,27 @@ class TestresultContainer():
 	def __str__(self):
 		""" Returns the results in a human readable form """
 		vals = self.getDict()
+		padLabel1 = " " * max(0, len(self.label2) - len(self.label1))
+		padLabel2 = " " * max(0, len(self.label1) - len(self.label2))
+		padNoLabel = " " * max(len(self.label1), len(self.label2))
 		ret = """\
-				Tested: {}
-				Correct: {} ({}%)
-				Incorrect: {} ({}%)
-				Correct {}: {} ({}%)
-				Correct {}: {} ({}%)
-				Incorrect {}: {} ({}%)
-				Incorrect {}: {} ({}%)""".format(vals["tested"],
-				                                 vals["correct"], vals["correct-percentage"],
-				                                 vals["incorrect"], 100 - vals["correct-percentage"],
-				                                 self.label1, vals["correct-" + self.label1],
-				                                 vals["correct-" + self.label1 + "-percentage"],
-				                                 self.label2, vals["correct-" + self.label2],
-				                                 vals["correct-" + self.label2 + "-percentage"],
-				                                 self.label1, vals["correct-" + self.label1],
-				                                 100 - vals["correct-" + self.label1 + "-percentage"],
-				                                 self.label2, vals["correct-" + self.label2],
-				                                 100 - vals["correct-" + self.label2 + "-percentage"])
+				Tested:       {}   {} ({}: {}, {}: {})
+				Correct:      {}   {} ({:6.2f}%)
+				Incorrect:    {}   {} ({:6.2f}%)
+				True positive {}: {} {:2} ({:6.2f}%)
+				True positive {}: {} {:2} ({:6.2f}%)
+				False positive {}:{} {:2} ({:6.2f}%)
+				False positive {}:{} {:2} ({:6.2f}%)""".format(padNoLabel, vals["tested"], self.label1, vals["tested-" + self.label1],
+				                                 self.label2, vals["tested-" + self.label2], #endTested
+				                                 padNoLabel, vals["correct"], vals["correct-percentage"], #endCorrect
+				                                 padNoLabel, vals["incorrect"], 100 - vals["correct-percentage"], #endIncorrect
+				                                 self.label1, padLabel1, vals["true-positive-" + self.label1],
+				                                 vals["true-positive-" + self.label1 + "-percentage"], #endTP1
+				                                 self.label2, padLabel2, vals["true-positive-" + self.label2],
+				                                 vals["true-positive-" + self.label2 + "-percentage"],  #endTP2
+				                                 self.label2, padLabel2, vals["false-positive-" + self.label1],
+				                                 vals["false-positive-" + self.label1 + "-percentage"], #endFP1
+				                                 self.label1, padLabel1, vals["false-positive-" + self.label2],
+				                                 vals["false-positive-" + self.label2 + "-percentage"])
 
 		return textwrap.dedent(ret)
