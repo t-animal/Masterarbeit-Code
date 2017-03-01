@@ -6,7 +6,7 @@ import pickle
 import re
 
 from sklearn import svm as SVM
-from gensim.models import Word2Vec
+from gensim.models import KeyedVectors
 from util import softmax, isAroused
 from util.plot import plotPCA
 from util.containers import LazyModel, TestresultContainer
@@ -20,7 +20,7 @@ class Classifier():
 
 	def __init__(self, modelPath):
 		self.modelPath = modelPath
-		self.model = LazyModel(Word2Vec.load_word2vec_format, modelPath, binary=True)
+		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=True)
 
 
 	def _getDescribingVectors(self, filename):
@@ -81,12 +81,10 @@ class Classifier():
 				content = re.sub('[.,:;!?…=\'"`´‘’“”„#%\\()/*+-]', ' ', content)
 
 				for token in content.lower().split():
-					if token not in self.model.wv.vocab.keys():
+					try:
+						translatedFile.append((token, self.model[token]))
+					except KeyError:
 						log.debug("token '%s' not in vocabulary", token)
-						continue
-
-					translatedFile.append((token, self.model[token]))
-
 			try:
 				with open(cachePath, "wb") as cacheFile:
 					log.debug("storing vectorized file %s to cache", filename)
