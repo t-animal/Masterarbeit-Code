@@ -79,7 +79,7 @@ class DocSumSVMClassifier(SVMClassifier):
 		arousedVectors = []
 
 		for filename in filenames:
-			fileSum = self._getDescribingVectors(filename)
+			fileSum = self._getDescribingVectors(filename)[0]
 
 			if isAroused(filename):
 				arousedVectors.append(fileSum)
@@ -97,11 +97,14 @@ if __name__ == "__main__":
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
 	parser.add_argument("--human", help="Print human-readble output", action="store_true")
 	parser.add_argument("--modelPath", help="Path to word2vec model", required=True)
-	parser.add_argument("--train", help="Path to document(s) to train from", nargs="+", required=True)
-	parser.add_argument("--test", help="Path to document(s) to test against", nargs="+",
-	                    required=True)
+	parser.add_argument("--plot", help="Plot the PCA of the document sum of files", nargs="+")
+	parser.add_argument("--train", help="Path to document(s) to train from", nargs="+")
+	parser.add_argument("--test", help="Path to document(s) to test against", nargs="+")
 
 	args = parser.parse_args()
+
+	if not args.plot and ( not args.test or not args.train ):
+		parser.error("Supply either test and train or plot")
 
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
@@ -112,7 +115,11 @@ if __name__ == "__main__":
 		if args.train:
 			classifier.train(args.train)
 
-		result = classifier.test(args.test)
+		if args.test:
+			result = classifier.test(args.test)
+
+		if args.plot:
+			classifier.plot(args.plot)
 
 		if args.human:
 			if os.isatty(sys.stdout.fileno()):
@@ -122,6 +129,7 @@ if __name__ == "__main__":
 			print(result)
 		else:
 			print(result.getJSON())
+
 
 	except KeyboardInterrupt:
 		pass
