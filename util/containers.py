@@ -1,5 +1,6 @@
 import json
 import logging
+import scipy
 import textwrap
 
 log = logging.getLogger("de.t_animal.MA.util.containers")
@@ -163,7 +164,10 @@ class TestresultContainer():
 	def oneline(self):
 		""" Returns a short oneliner describing the results"""
 		vals = self.getDict()
-		return "{} correct out of {} ({}%)".format(vals["correct"], vals["tested"], vals["correct-percentage"])
+		pValue = scipy.stats.binom.sf(vals["correct"], vals["tested"], 0.5) - \
+					 scipy.stats.binom.pmf(vals["correct"], vals["tested"], 0.5)/2
+		return "{} correct out of {} ({:6.2f}%, p={:6.3})".format(vals["correct"], vals["tested"],
+				                                                   vals["correct-percentage"], pValue)
 
 
 	def __str__(self):
