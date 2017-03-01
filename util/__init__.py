@@ -13,9 +13,12 @@ def isAroused(path):
 	folder, filename = os.path.split(os.path.abspath(path))
 
 	if folder.endswith("Veroff"):
-		return "C" in path
+		return "E" in path
 
 	if folder.endswith("Study_2_PSE_files"):
 		return int(path[-5]) >= 4
+
+	if folder.endswith("Winter_arousal_stories"):
+		return filename.startswith("Winter_1")
 
 	raise ValueError("Unknown path")
