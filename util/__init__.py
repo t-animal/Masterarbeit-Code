@@ -13,12 +13,18 @@ def isAroused(path):
 	folder, filename = os.path.split(os.path.abspath(path))
 
 	if folder.endswith("Veroff"):
-		return "E" in path
+		return "E" in filename
 
 	if folder.endswith("Study_2_PSE_files"):
 		return int(path[-5]) >= 4
 
 	if folder.endswith("Winter_arousal_stories"):
 		return filename.startswith("Winter_1")
+
+	if folder.endswith("AtkinsonEtAl_nAff_cleaned"):
+		return "R" in filename
+
+	if folder.endswith("McAdams_1980_nAff_cleaned"):
+		return int(filename[:-4]) not in ([9, 10, 11, 12] + list(range(85, 123)))
 
 	raise ValueError("Unknown path")

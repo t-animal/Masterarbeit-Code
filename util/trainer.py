@@ -10,7 +10,9 @@ else:
 _dataSets = {
 	"Veroff": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Veroff/",
 	"Winter": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Winter_arousal_stories/",
-	"Study2": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Study_2_PSE_files/"
+	"Study2": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Study_2_PSE_files/",
+	"Atkinson": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/AtkinsonEtAl_nAff_cleaned/",
+	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/McAdams_1980_nAff_cleaned/"
 }
 
 
