@@ -37,14 +37,20 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Generate train and testsets')
 	parser.add_argument("--human", help="", action="store_true")
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
-	parser.add_argument("--train", help="", nargs="+", required=True, choices=ChoicesContainer(_dataSets.keys()))
+	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(_dataSets.keys()), default=[])
 	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(_dataSets.keys()))
+	parser.add_argument("--store", help="")
+	parser.add_argument("--load", help="")
 	parser.add_argument("--classifier", "-c", help="", required=True)
 	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
 
 	args = parser.parse_args()
 	if args.test == None:
 		args.test = args.train
+
+	if not (bool(args.train) ^ bool(args.load)):
+		parser.error("Please supply either train or load and don't supply both")
+		sys.exit(1)
 
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
@@ -56,7 +62,14 @@ if __name__ == "__main__":
 		print(classifierClass.__init__.__code__.co_varnames[1:])
 
 	classifier = classifierClass(*args.classifierArgs)
-	classifier.train(trainFiles)
+	if bool(args.train):
+		classifier.train(trainFiles)
+	else:
+		classifier.load(args.load)
+
+	if args.store:
+		classifier.store(args.store)
+
 	result = classifier.test(testFiles)
 
 	if args.human:

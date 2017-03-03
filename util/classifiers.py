@@ -99,12 +99,13 @@ class Classifier():
 		"""Abstract method, do your magic here.
 		   It should load the internal state from a path
 		"""
+		raise NotImplemented()
 
-
-	def save(self, path):
+	def store(self, path):
 		"""Abstract method, do your magic here.
 		   It should store the internal state to a path
 		"""
+		raise NotImplemented()
 
 
 
@@ -149,7 +150,7 @@ class SVMClassifier(Classifier):
 			self.svm = pickle.load(persistanceFile, encoding='latin1')
 
 
-	def save(self, svmPath):
+	def store(self, svmPath):
 		"""Store the internal state to a path
 		"""
 		if self.svm is None:
