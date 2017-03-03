@@ -3,7 +3,7 @@
 import logging as log
 import os
 
-from util.trainer import generateArguments, _dataSets
+from util.argGenerator import generateArguments, _dataSets
 
 def getClassifierClass(className, package="."):
 	if not package == ".":

@@ -8,17 +8,18 @@ else:
 	from util import isAroused
 
 _dataSets = {
-	"Veroff": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Veroff/",
-	"Winter": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Winter_arousal_stories/",
-	"Study2": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/Study_2_PSE_files/",
-	"Atkinson": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/AtkinsonEtAl_nAff_cleaned/",
-	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../../infos/McAdams_1980_nAff_cleaned/"
+	"Veroff": os.path.dirname(os.path.abspath(__file__)) + "/../data/Veroff/",
+	"Winter": os.path.dirname(os.path.abspath(__file__)) + "/../data/Winter_arousal_stories/",
+	"Study2": os.path.dirname(os.path.abspath(__file__)) + "/../data/Study_2_PSE_files/",
+	"Atkinson": os.path.dirname(os.path.abspath(__file__)) + "/../data/AtkinsonEtAl_nAff_cleaned/",
+	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/"
 }
 
 
-def generateArguments(trainSets, testSets, testPercentage=20):
+def generateArguments(trainSets, testSets, testPercentage=20, validatePercentage = 0):
 	testFiles = []
 	trainFiles = []
+	validateFiles = []
 
 	for testSet in testSets:
 		if "." in testSet:
@@ -41,10 +42,13 @@ def generateArguments(trainSets, testSets, testPercentage=20):
 
 	for trainSet in trainSets:
 		if "." in trainSet:
-			trainSet, percentage = trainSet.split(".")
-			percentage = int(percentage)
+			trainSet, trainPercentage = trainSet.split(".", 1)
+			if "." in trainPercentage:
+				trainPercentage, validatePercentage = map(int, trainPercentage.split("."))
+			trainPercentage = int(trainPercentage)
 		else:
-			percentage = 100 - testPercentage
+			trainPercentage = 100 - testPercentage
+			validatePercentage = validatePercentage
 
 		if trainSet not in _dataSets:
 			raise ValueError("Not a valid train set: " + trainSet)
@@ -54,9 +58,12 @@ def generateArguments(trainSets, testSets, testPercentage=20):
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		trainFiles += filter(lambda x: x not in testFiles, allAroused[:int(percentage * len(allFiles) / 100 / 2)])
-		trainFiles += filter(lambda x: x not in testFiles, allNonAroused[:int(percentage * len(allFiles) / 100 / 2)])
-
+		if validatePercentage == 0:
+			trainFiles += filter(lambda x: x not in testFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+			trainFiles += filter(lambda x: x not in testFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+		else:
+			validateFiles += filter(lambda x: x not in testFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+			validateFiles += filter(lambda x: x not in testFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
 
 	#assert no testfiles are also trainfiles
 	assert(set(trainFiles) - set(testFiles) == set(trainFiles))
