@@ -191,9 +191,9 @@ class TestresultContainer():
 				                                 vals["true-positive-" + self.label1 + "-percentage"], #endTP1
 				                                 self.label2, padLabel2, vals["true-positive-" + self.label2],
 				                                 vals["true-positive-" + self.label2 + "-percentage"],  #endTP2
-				                                 self.label2, padLabel2, vals["false-positive-" + self.label1],
+				                                 self.label1, padLabel1, vals["false-positive-" + self.label1],
 				                                 vals["false-positive-" + self.label1 + "-percentage"], #endFP1
-				                                 self.label1, padLabel1, vals["false-positive-" + self.label2],
+				                                 self.label2, padLabel2, vals["false-positive-" + self.label2],
 				                                 vals["false-positive-" + self.label2 + "-percentage"])
 
 		return textwrap.dedent(ret)
