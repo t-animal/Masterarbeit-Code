@@ -20,7 +20,7 @@ class Classifier():
 
 	def __init__(self, modelPath):
 		self.modelPath = modelPath
-		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=True)
+		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=modelPath.endswith("bin"))
 
 
 	def _getDescribingVectors(self, filename):
