@@ -68,9 +68,11 @@ class Classifier():
 
 		cachePath = os.path.split(filename)
 		cachePath = os.path.join(cachePath[0], "." + cachePath[1] + ".veccache")
+		cache = {}
 		try:
 			with open(cachePath, "rb") as cacheFile:
-				translatedFile = pickle.load(cacheFile, encoding='latin1')[os.path.realpath(self.modelPath)]
+				cache = pickle.load(cacheFile, encoding='latin1')
+				translatedFile = cache[os.path.realpath(self.modelPath)]
 				log.debug("loaded vectorized file %s from cache", filename)
 
 		except Exception:
@@ -88,7 +90,8 @@ class Classifier():
 			try:
 				with open(cachePath, "wb") as cacheFile:
 					log.debug("storing vectorized file %s to cache", filename)
-					pickle.dump({os.path.realpath(self.modelPath): translatedFile}, cacheFile)
+					cache[self.modelPath] = translatedFile
+					pickle.dump(cache, cacheFile)
 			except Exception as e:
 				log.warn("Could not store cache: %s", str(e))
 
