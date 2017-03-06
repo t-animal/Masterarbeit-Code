@@ -25,6 +25,6 @@ def isAroused(path):
 		return "R" in filename
 
 	if folder.endswith("McAdams_1980_nAff_cleaned"):
-		return int(filename[:-4]) not in ([9, 10, 11, 12] + list(range(85, 123)))
+		return int(filename[:3]) not in ([9, 10, 11, 12] + list(range(85, 123)))
 
 	raise ValueError("Unknown path")
