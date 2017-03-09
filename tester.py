@@ -3,7 +3,7 @@
 import logging as log
 import os
 
-from util.argGenerator import generateArguments, _dataSets
+from util.argGenerator import generateTrainAndValidateset, generateTestset, _dataSets
 
 def getClassifierClass(className, package="."):
 	if not package == ".":
@@ -39,22 +39,23 @@ if __name__ == "__main__":
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
 	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
+	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
 	parser.add_argument("--store", help="")
 	parser.add_argument("--load", help="")
 	parser.add_argument("--classifier", "-c", help="", required=True)
 	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
 
 	args = parser.parse_args()
-	if args.test == None:
-		args.test = args.train
+	if args.validate == None:
+		args.validate = args.train
 
 	if "all" in args.train:
 		percentage = "."+args.train.split(".") if "." in args.train else ""
 		args.train = list(map(lambda x: x+percentage, _dataSets.keys()))
 
-	if "all" in args.test:
-		percentage = "."+args.test.split(".") if "." in args.test else ""
-		args.test = list(map(lambda x: x+percentage, _dataSets.keys()))
+	if "all" in args.validate:
+		percentage = "."+args.validate.split(".") if "." in args.validate else ""
+		args.validate = list(map(lambda x: x+percentage, _dataSets.keys()))
 
 	if not (bool(args.train) ^ bool(args.load)):
 		parser.error("Please supply either train or load and don't supply both")
@@ -63,8 +64,12 @@ if __name__ == "__main__":
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
 
+	if args.test and args.validate:
+		log.warning("Supplying test sets overrides the validate sets!")
+
+
 	classifierClass = getClassifierClass(args.classifier)
-	trainFiles, testFiles = generateArguments(args.train, args.test)
+	trainFiles, validateFiles = generateTrainAndValidateset(args.train, args.validate)
 
 	if len(args.classifierArgs) == 0:
 		print(classifierClass.__init__.__code__.co_varnames[1:])
@@ -78,10 +83,18 @@ if __name__ == "__main__":
 	if args.store:
 		classifier.store(args.store)
 
-	result = classifier.test(testFiles)
+	if args.test:
+		result = classifier.test(generateTestset(args.test))
+	else:
+		#validate the results on the validate set as if it were the test set
+		result = classifier.test(validateFiles)
 
 	if args.human:
-		print("Results for training on {} and testing on {}".format(args.train, args.test))
+		if args.test:
+			print("Results for training on {} and testing on {}".format(args.train, args.test))
+		else:
+			print("Results for training on {} and validating on {}".format(args.train, args.validate))
+
 		if os.isatty(sys.stdout.fileno()):
 			print("\033[1m"+result.oneline()+"\033[0m")
 		else:

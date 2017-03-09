@@ -15,29 +15,38 @@ _dataSets = {
 	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/"
 }
 
-
-def generateArguments(trainSets, testSets, testPercentage=20, validatePercentage = 0):
+def generateTestset(testSets):
 	testFiles = []
-	trainFiles = []
-	validateFiles = []
-
 	for testSet in testSets:
-		if "." in testSet:
-			testSet, percentage = testSet.split(".")
-			percentage = int(percentage)
-		else:
-			percentage = testPercentage
-
 		if testSet not in _dataSets:
 			raise ValueError("Not a valid test set: " + testSet)
 
-		allFiles = sorted(filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[testSet])))
-		allFiles = list(map(lambda x: _dataSets[testSet] + x, allFiles))
+		testFiles += map(lambda x: _dataSets[testSet] + "test/" + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[testSet] + "test/")))
+
+	return testFiles
+
+def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
+	validateFiles = []
+	trainFiles = []
+
+	for validateSet in validateSets:
+		if "." in validateSet:
+			validateSet, percentage = validateSet.split(".")
+			percentage = int(percentage)
+		else:
+			percentage = validatePercentage
+
+		if validateSet not in _dataSets:
+			raise ValueError("Not a valid validate set: " + validateSet)
+
+		allFiles = sorted(filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[validateSet])))
+		allFiles = list(map(lambda x: _dataSets[validateSet] + x, allFiles))
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		testFiles += allAroused[int(-percentage * len(allFiles) / 100 / 2):]
-		testFiles += allNonAroused[int(-percentage * len(allFiles) / 100 / 2):]
+		validateFiles += allAroused[int(-percentage * len(allFiles) / 100 / 2):]
+		validateFiles += allNonAroused[int(-percentage * len(allFiles) / 100 / 2):]
 
 
 	for trainSet in trainSets:
@@ -47,7 +56,7 @@ def generateArguments(trainSets, testSets, testPercentage=20, validatePercentage
 				trainPercentage, validatePercentage = map(int, trainPercentage.split("."))
 			trainPercentage = int(trainPercentage)
 		else:
-			trainPercentage = 100 - testPercentage
+			trainPercentage = 100 - validatePercentage
 			validatePercentage = validatePercentage
 
 		if trainSet not in _dataSets:
@@ -58,19 +67,15 @@ def generateArguments(trainSets, testSets, testPercentage=20, validatePercentage
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		if validatePercentage == 0:
-			trainFiles += filter(lambda x: x not in testFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
-			trainFiles += filter(lambda x: x not in testFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
-		else:
-			validateFiles += filter(lambda x: x not in testFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
-			validateFiles += filter(lambda x: x not in testFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+		trainFiles += filter(lambda x: x not in validateFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+		trainFiles += filter(lambda x: x not in validateFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
 
-	#assert no testfiles are also trainfiles
-	assert(set(trainFiles) - set(testFiles) == set(trainFiles))
-	#assert an equal amount of aroused and non-aroused testfiles
-	assert(len(list(filter(isAroused, testFiles))) == len(testFiles) / 2)
+	#assert no validatefiles are also trainfiles
+	assert(set(trainFiles) - set(validateFiles) == set(trainFiles))
+	#assert an equal amount of aroused and non-aroused validatefiles
+	assert(len(list(filter(isAroused, validateFiles))) == len(validateFiles) / 2)
 
-	return trainFiles, testFiles
+	return trainFiles, validateFiles
 
 
 if __name__ == "__main__":
@@ -89,13 +94,13 @@ if __name__ == "__main__":
 		def __iter__(self):
 			return self.vals.__iter__()
 
-	parser = argparse.ArgumentParser(description='Generate train and testsets.')
+	parser = argparse.ArgumentParser(description='Generate train and validatesets.')
 	parser.add_argument("--train", help="", nargs="+", required=True, choices=ChoicesContainer(_dataSets.keys()))
-	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(_dataSets.keys()))
+	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(_dataSets.keys()))
 
 	args = parser.parse_args()
-	if args.test == None:
-		args.test = args.train
-	trainFiles, testFiles = generateArguments(args.train, args.test)
+	if args.validate == None:
+		args.validate = args.train
+	trainFiles, validateFiles = generateTrainAndValidateset(args.train, args.validate)
 
-	print("--train {} --test {}".format(" ".join(trainFiles), " ".join(testFiles)))
+	print("--train {} --validate {}".format(" ".join(trainFiles), " ".join(validateFiles)))
