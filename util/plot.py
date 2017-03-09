@@ -6,16 +6,17 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 log = logging.getLogger("de.t_animal.MA.util.pcaPlotter")
 
-def plotPCA2D(class1, class2, class1Label, class2Label):
+def plot2D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 	X = class1 + class2
 	y =  ["c"] * len(class1) + ["e"] * len(class2)
 	mask1 = [True]  * len(class1) + [False] * len(class2)
 	mask2 = [False] * len(class1) + [True]  * len(class2)
 
-	pca = PCA(n_components=2)
+	pca = reductionFunction(n_components=2)
 	X_r = pca.fit(X).transform(X)
 
 	# Percentage of variance explained for each components
@@ -29,7 +30,7 @@ def plotPCA2D(class1, class2, class1Label, class2Label):
 
 	plt.show()
 
-def plotPCA3D(class1, class2, class1Label, class2Label):
+def plot3D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 	X = class1 + class2
 	y =  ["c"] * len(class1) + ["e"] * len(class2)
 	mask1 = [True]  * len(class1) + [False] * len(class2)
@@ -53,8 +54,16 @@ def plotPCA3D(class1, class2, class1Label, class2Label):
 
 def plotPCA(class1, class2, class1Label, class2Label, nDims=2):
 	if nDims == 2:
-		plotPCA2D(class1, class2, class1Label, class2Label)
+		plot2D(class1, class2, class1Label, class2Label, PCA)
 	elif nDims == 3:
-		plotPCA3D(class1, class2, class1Label, class2Label)
+		plot3D(class1, class2, class1Label, class2Label, PCA)
+	else:
+		log.error("nDims must be either 2 or 3, is %s", nDims)
+
+def plotLDA(class1, class2, class1Label, class2Label, nDims=2):
+	if nDims == 2:
+		plot2D(class1, class2, class1Label, class2Label, LinearDiscriminantAnalysis)
+	elif nDims == 3:
+		plot3D(class1, class2, class1Label, class2Label, LinearDiscriminantAnalysis)
 	else:
 		log.error("nDims must be either 2 or 3, is %s", nDims)
