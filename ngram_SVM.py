@@ -39,6 +39,7 @@ class NGramSVM(SVMClassifier):
 			for offset in range(-halfWindow, halfWindow):
 				tmpSum += vectorizedFile[index + offset][1]
 
+			tmpSum **= 3
 			tmpSum /= self.windowSize
 
 			yield tmpSum
