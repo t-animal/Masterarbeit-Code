@@ -1,6 +1,7 @@
 #!../venv/bin/python
 
 import os
+import random
 
 if __name__ == "__main__":
 	from __init__ import isAroused
@@ -14,6 +15,7 @@ _dataSets = {
 	"Atkinson": os.path.dirname(os.path.abspath(__file__)) + "/../data/AtkinsonEtAl_nAff_cleaned/",
 	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/"
 }
+
 
 def generateTestset(testSets):
 	testFiles = []
@@ -42,6 +44,9 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 
 		allFiles = sorted(filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[validateSet])))
 		allFiles = list(map(lambda x: _dataSets[validateSet] + x, allFiles))
+		random.seed(42) #make sure all lists are randomized equally each time
+		random.shuffle(allFiles)
+
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
@@ -64,6 +69,9 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 
 		allFiles = sorted(filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[trainSet])))
 		allFiles = list(map(lambda x: _dataSets[trainSet] + x, allFiles))
+		random.seed(42) #make sure all lists are randomized equally each time
+		random.shuffle(allFiles)
+
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
