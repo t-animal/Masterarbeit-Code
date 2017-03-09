@@ -141,7 +141,7 @@ class SVMClassifier(Classifier):
 				log.debug("Vector: %s", str(vector))
 
 		log.info("Start training svm with document vectors")
-		self.svm = SVM.SVC(probability = True, class_weight={0:1, 1:1.1}) # TODO: Plot results for weights
+		self.svm = SVM.SVC() # TODO: Plot results for weights
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
 

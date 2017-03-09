@@ -46,6 +46,7 @@ class NGramSVM(SVMClassifier):
 
 	def train(self, trainFilenames):
 		super().train(trainFilenames)
+		return
 
 		log.info("Finished training, determining suggested threshold")
 
@@ -92,16 +93,21 @@ class NGramSVM(SVMClassifier):
 
 			totalAroused = 0
 			totalNonAroused = 0
+			totalArousedDistance = 0
+			totalNonArousedDistance = 0
 
 			for fileSum in fileSums:
 
-				if bool(self.svm.predict([fileSum])[0]):
-					totalAroused += 1
-				else:
-					totalNonAroused += 1
-
 				distance = self.svm.decision_function([fileSum])[0]
 				testResult.additional(distances = {filename + "-" + str(totalAroused+totalNonAroused): distance})
+
+
+				if bool(self.svm.predict([fileSum])[0]):
+					totalAroused += 1
+					totalArousedDistance += abs(distance)
+				else:
+					totalNonAroused += 1
+					totalNonArousedDistance += abs(distance)
 
 			testResult.additional(classifyCount = {filename: {"isAroused": isAroused(filename), "aroused": totalAroused, "nonAroused": totalNonAroused}})
 
@@ -109,7 +115,12 @@ class NGramSVM(SVMClassifier):
 				testResult.addResult(True, isAroused(filename))
 				continue
 
-			testResult.addResult(totalAroused/totalNonAroused >= self.arousalLimit, isAroused(filename))
+			if totalAroused == 0:
+				testResult.addResult(False, isAroused(filename))
+				continue
+
+			# testResult.addResult(totalAroused/totalNonAroused >= self.arousalLimit, isAroused(filename))
+			testResult.addResult(abs(totalArousedDistance/totalAroused) > abs(totalNonArousedDistance/totalNonAroused), isAroused(filename))
 
 			log.info("Checked file %s, aroused: %d  non-aroused: %d, %s", filename, totalAroused, totalNonAroused,
 			         "CORRECT" if (totalAroused > totalNonAroused) == isAroused(filename) else "INCORRECT")

@@ -32,7 +32,9 @@ class DocSumSVMClassifier(SVMClassifier):
 		for token, vector in vectorizedFile:
 			fileSum += vector
 
+		# sign = np.sign(fileSum)
 		fileSum **= 3
+		# fileSum *= sign
 		fileSum /= len(vectorizedFile)
 
 		yield fileSum

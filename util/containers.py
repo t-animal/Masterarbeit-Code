@@ -3,7 +3,6 @@ import logging
 import scipy
 import textwrap
 
-log = logging.getLogger("de.t_animal.MA.util.containers")
 
 class LazyModel():
 	"""
@@ -13,6 +12,7 @@ class LazyModel():
 		After instantiating it, this class's object "morphs" into an object of
 		the wrapped class (i.e. it casts itself and replaces its datastructures).
 	"""
+	log = logging.getLogger("de.t_animal.MA.util.LazyModel")
 
 	def __init__(self, modelConstructor, *args, **kwargs):
 		"""
@@ -25,10 +25,10 @@ class LazyModel():
 		self.kwargs = kwargs
 
 	def _instantiate(self):
-		log.debug("Instantiating model")
+		LazyModel.log.debug("Instantiating model")
 		model = self.modelConstructor(*self.args, **self.kwargs)
 
-		log.debug("Morphing into model object")
+		LazyModel.log.debug("Morphing into model object")
 		del self.modelConstructor
 		del self.args
 		del self.kwargs
@@ -50,6 +50,8 @@ class LazyModel():
 class TestresultContainer():
 	""" A container for test results so that they can be stored and printed
 	    in a consistent manner """
+
+	log = logging.getLogger("de.t_animal.MA.util.TestresultContainer")
 
 	def __init__(self, class1, class2, class1Label=None, class2Label=None):
 		"""
@@ -83,6 +85,7 @@ class TestresultContainer():
 		assert(expectedClass in [self.class1, self.class2])
 
 		if resultingClass == expectedClass:
+			TestresultContainer.log.info("Added a correct result")
 			self.correct += 1
 
 			if expectedClass == self.class1:
@@ -90,6 +93,7 @@ class TestresultContainer():
 			else:
 				self.true_pos_class2 += 1
 		else:
+			TestresultContainer.log.info("Added an incorrect result")
 			self.incorrect += 1
 
 			if resultingClass == self.class1:
