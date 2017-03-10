@@ -118,11 +118,13 @@ class SVMClassifier(Classifier):
 		super().__init__(modelPath)
 
 
-	def train(self, trainFilenames):
+	def train(self, trainFilenames, svmParams={}):
 		"""Trains an SVM using the files supplied in trainFilenames.
 
 		   :param trainFilenames: The filenames to train upon
 		   :type trainFilenames: iterable of strings
+		   :param svmParams: values to pass to the svm as keyword arguments
+		   :type svmParams: dict
 		"""
 		log.info("Training SVM from scratch, collecting document sums first")
 		nonArousedVectors = []
@@ -141,7 +143,7 @@ class SVMClassifier(Classifier):
 				log.debug("Vector: %s", str(vector))
 
 		log.info("Start training svm with document vectors")
-		self.svm = SVM.SVC() # TODO: Plot results for weights
+		self.svm = SVM.SVC(**svmParams) # TODO: Plot results for weights
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
 
