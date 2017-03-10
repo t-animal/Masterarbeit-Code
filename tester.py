@@ -39,14 +39,14 @@ if __name__ == "__main__":
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
 	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
-	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
+	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--store", help="")
 	parser.add_argument("--load", help="")
 	parser.add_argument("--classifier", "-c", help="", required=True)
 	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
 
 	args = parser.parse_args()
-	if args.validate == None:
+	if not args.validate and not args.test:
 		args.validate = args.train
 
 	if "all" in args.train:
