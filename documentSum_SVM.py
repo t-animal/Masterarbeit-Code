@@ -19,6 +19,11 @@ class DocSumSVMClassifier(SVMClassifier):
 	    and trains an SVM with the result
 	"""
 
+	def __init__(self, modelPath, power = 3, min_probability = 0):
+		super().__init__(modelPath)
+		self.power = int(power)
+		self.min_probability = float(min_probability)
+
 	def _generateDescribingVectors(self, filename):
 		"""Vectorizes a file, averages the vectors
 
@@ -32,12 +37,19 @@ class DocSumSVMClassifier(SVMClassifier):
 		for token, vector in vectorizedFile:
 			fileSum += vector
 
-		# sign = np.sign(fileSum)
-		fileSum **= 3
-		# fileSum *= sign
+		if self.power % 2 == 1:
+			fileSum **= self.power
+		else:
+			sign = np.sign(fileSum)
+			fileSum **= self.power
+			fileSum *= sign
+
 		fileSum /= len(vectorizedFile)
 
 		yield fileSum
+
+	def train(self, trainFilenames):
+		super().train(trainFilenames, {"probability": self.min_probability > 0, "random_state": 42})
 
 
 	def test(self, testFilenames):
@@ -57,14 +69,20 @@ class DocSumSVMClassifier(SVMClassifier):
 		for filename in testFilenames:
 			fileSum = self._getDescribingVectors(filename)[0]
 
-			result = self.svm.predict([fileSum])[0]
-			testResult.addResult(bool(result), isAroused(filename))
-
 			distance = self.svm.decision_function([fileSum])[0]
 			testResult.additional(distances = {filename: distance})
 
-			log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
-			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT", distance)
+			probability = None
+			if self.min_probability > 0:
+				probability = self.svm.predict_proba([fileSum])[0]
+				testResult.additional(probabilities = {filename: [distance, probability[0], probability[1]]})
+
+			if probability is None or any(probability > self.min_probability):
+				result = self.svm.predict([fileSum])[0]
+				testResult.addResult(bool(result), isAroused(filename))
+
+				log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
+				         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT", distance)
 
 		log.info("Finished testing: %s", testResult.oneline())
 
