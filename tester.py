@@ -1,4 +1,5 @@
 #!./venv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
 import logging as log
 import os
@@ -18,9 +19,15 @@ def getClassifierClass(className, package="."):
 
 	raise ValueError("no such class in this package!")
 
+def getAllClassifiers(package="."):
+	for module in filter(lambda x: x.endswith(".py"), os.listdir(package)):
+		for line in open(module, "r"):
+			#this is only a rough estimate but good enough for now
+			if line.startswith("class") and ("(SVMClassifier)" in line or "(Classifier)" in line):
+				yield line[6:line.index("(")]
 
 if __name__ == "__main__":
-	import argparse, sys
+	import argcomplete, argparse, sys
 
 	class ChoicesContainer:
 		def __init__(self, vals):
@@ -34,6 +41,9 @@ if __name__ == "__main__":
 		def __iter__(self):
 			return self.vals.__iter__()
 
+	def ClassifierCompleter(prefix, **kwargs):
+		return filter(lambda x: x.startswith(prefix), getAllClassifiers())
+
 	parser = argparse.ArgumentParser(description='Generate train and testsets')
 	parser.add_argument("--human", help="", action="store_true")
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
@@ -42,9 +52,10 @@ if __name__ == "__main__":
 	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--store", help="")
 	parser.add_argument("--load", help="")
-	parser.add_argument("--classifier", "-c", help="", required=True)
+	parser.add_argument("--classifier", "-c", help="", required=True).completer = ClassifierCompleter
 	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
 
+	argcomplete.autocomplete(parser)
 	args = parser.parse_args()
 	if not args.validate and not args.test:
 		args.validate = args.train

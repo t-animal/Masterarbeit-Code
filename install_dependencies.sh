@@ -41,6 +41,12 @@ if [[ -r venv/bin/activate ]]; then
 	install_package gensim
 	install_package scikit-learn
 	install_package matplotlib
+	install_package argcomplete
+
+	echo "=============================================================================="
+	echo "To use completion for tester.py, execute this after activating the virtualenv:"
+	echo 'eval "$(register-python-argcomplete ./tester.py)"'
+	echo "=============================================================================="
 
 else
 	echo Cannot source virtualenv activation file!
