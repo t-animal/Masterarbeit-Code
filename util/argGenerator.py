@@ -50,8 +50,8 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		validateFiles += allAroused[int(-percentage * len(allFiles) / 100 / 2):]
-		validateFiles += allNonAroused[int(-percentage * len(allFiles) / 100 / 2):]
+		validateFiles += allAroused[len(allAroused) - int(percentage * len(allFiles) / 100 / 2):]
+		validateFiles += allNonAroused[len(allNonAroused) - int(percentage * len(allFiles) / 100 / 2):]
 
 
 	for trainSet in trainSets:
