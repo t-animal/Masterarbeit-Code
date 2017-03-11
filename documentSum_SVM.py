@@ -49,7 +49,7 @@ class DocSumSVMClassifier(SVMClassifier):
 		yield fileSum
 
 	def train(self, trainFilenames):
-		super().train(trainFilenames, {"probability": self.min_probability > 0, "random_state": 42})
+		super().train(trainFilenames, {"probability": self.min_probability > 0, "random_state": 42, "C": 2.5})
 
 
 	def test(self, testFilenames):
