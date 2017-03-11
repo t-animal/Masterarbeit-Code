@@ -31,7 +31,7 @@ class NGramSVM(SVMClassifier):
 			log.warning("Could not calculate vector of %s (windowSize > word count)", filename)
 
 		for index in range(halfWindow, len(vectorizedFile) - halfWindow):
-			tmpSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float32)
+			tmpSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
 
 			if len(vectorizedFile) <= self.windowSize:
 				continue

@@ -33,7 +33,7 @@ class DocSumSVMClassifier(SVMClassifier):
 		"""
 		vectorizedFile = self._vectorizeFile(filename)
 
-		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float32)
+		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
 		for token, vector in vectorizedFile:
 			fileSum += vector
 
