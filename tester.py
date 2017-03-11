@@ -3,8 +3,26 @@
 
 import logging as log
 import os
+from util.classifiers import Classifier
+from util.containers import TestresultContainer
 
 from util.argGenerator import generateTrainAndValidateset, generateTestset, _dataSets
+
+class CacheGenerator(Classifier):
+	"""This is a short class designed to be run once per model on all datasets
+		to pre-fill the vector cache"""
+	def train(self, trainFiles):
+		for filename in trainFiles:
+			log.info("Caching file vectors of %s", filename)
+			self._vectorizeFile(filename)
+		return TestresultContainer(True, False, "", "")
+
+	def test(self, trainFiles):
+		for filename in trainFiles:
+			log.info("Caching file vectors of %s", filename)
+			self._vectorizeFile(filename)
+		return TestresultContainer(True, False, "", "")
+
 
 def getClassifierClass(className, package="."):
 	if not package == ".":
@@ -60,13 +78,16 @@ if __name__ == "__main__":
 	if not args.validate and not args.test:
 		args.validate = args.train
 
-	if "all" in args.train:
+	if any(map(lambda x: "all" in x, args.validate)):
 		percentage = "."+args.train.split(".") if "." in args.train else ""
 		args.train = list(map(lambda x: x+percentage, _dataSets.keys()))
 
-	if "all" in args.validate:
+	if any(map(lambda x: "all" in x, args.validate)):
 		percentage = "."+args.validate.split(".") if "." in args.validate else ""
 		args.validate = list(map(lambda x: x+percentage, _dataSets.keys()))
+
+	if args.test and "all" in args.test:
+		args.test = list(_dataSets.keys())
 
 	if not (bool(args.train) ^ bool(args.load)):
 		parser.error("Please supply either train or load and don't supply both")
