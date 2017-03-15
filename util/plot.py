@@ -36,7 +36,7 @@ def plot3D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 	mask1 = [True]  * len(class1) + [False] * len(class2)
 	mask2 = [False] * len(class1) + [True]  * len(class2)
 
-	pca = PCA(n_components=3)
+	pca = reductionFunction(n_components=3)
 	X_r = pca.fit(X).transform(X)
 
 	# Percentage of variance explained for each components
