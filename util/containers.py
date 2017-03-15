@@ -129,17 +129,22 @@ class TestresultContainer():
 		total = self.correct + self.incorrect
 		total_class1 = self.true_pos_class1 + self.false_pos_class2
 		total_class2 = self.true_pos_class2 + self.false_pos_class1
-		correct_percentage = float(self.correct) / total * 100
+		try:
+			correct_percentage = float(self.correct) / total * 100
+		except ZeroDivisionError:
+			correct_percentage = float("nan")
 		try:
 			true_pos_class1_percentage = 100 * float(self.true_pos_class1) / total_class1
 			false_pos_class1_percentage = 100 * float(self.false_pos_class1) / total_class1
 		except ZeroDivisionError:
-			true_pos_class1_percentage = None
+			true_pos_class1_percentage =  float("nan")
+			false_pos_class1_percentage =  float("nan")
 		try:
 			true_pos_class2_percentage = 100 * float(self.true_pos_class2) / total_class2
 			false_pos_class2_percentage = 100 * float(self.false_pos_class2) / total_class2
 		except ZeroDivisionError:
-			true_pos_class2_percentage = None
+			true_pos_class2_percentage =  float("nan")
+			false_pos_class2_percentage =  float("nan")
 
 		return {
 			"tested": total,
