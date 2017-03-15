@@ -1,3 +1,4 @@
+import gensim
 import logging
 import numpy as np
 import os
@@ -80,9 +81,8 @@ class Classifier():
 
 			with open(filename, "r") as file:
 				content = file.read()
-				content = re.sub('[.,:;!?…=\'"`´‘’“”„#%\\()/*+-]', ' ', content)
 
-				for token in content.lower().split():
+				for token in gensim.utils.simple_preprocess(content):
 					try:
 						translatedFile.append((token, self.model[token]))
 					except KeyError:
