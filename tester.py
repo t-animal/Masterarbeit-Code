@@ -46,7 +46,7 @@ def getAllClassifiers(package="."):
 				yield line[6:line.index("(")]
 
 if __name__ == "__main__":
-	import argcomplete, argparse, sys
+	import argcomplete, argparse, configparser, sys
 
 	class ChoicesContainer:
 		def __init__(self, vals):
@@ -63,6 +63,13 @@ if __name__ == "__main__":
 	def ClassifierCompleter(prefix, **kwargs):
 		return filter(lambda x: x.startswith(prefix), getAllClassifiers())
 
+	configParser = configparser.ConfigParser()
+	configParser.read(os.path.split(__file__)[0] + os.sep + "tester.ini")
+	if "ModelPaths" in configParser:
+		modelPaths = dict(configParser["ModelPaths"])
+	else:
+		modelPaths = {}
+
 	parser = argparse.ArgumentParser(description='Generate train and testsets')
 	parser.add_argument("--human", help="", action="store_true")
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
@@ -74,12 +81,16 @@ if __name__ == "__main__":
 	parser.add_argument("--store", help="")
 	parser.add_argument("--load", help="")
 	parser.add_argument("--classifier", "-c", help="", required=True).completer = ClassifierCompleter
+	parser.add_argument("--modelPath", "-m", help="Load the model path from 'tester.ini' and pass it to the classifier", choices=list(modelPaths.keys()))
 	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
 
 	argcomplete.autocomplete(parser)
 	args = parser.parse_args()
 	if not args.validate and not args.test:
 		args.validate = args.train
+
+	if args.modelPath:
+		args.classifierArgs = [modelPaths[args.modelPath]] + args.classifierArgs
 
 	if any(map(lambda x: "all" in x, args.validate)):
 		percentage = "."+args.train.split(".") if "." in args.train else ""
@@ -101,7 +112,6 @@ if __name__ == "__main__":
 
 	if args.test and args.validate:
 		log.warning("Supplying test sets overrides the validate sets!")
-
 
 	classifierClass = getClassifierClass(args.classifier)
 	trainFiles, validateFiles = generateTrainAndValidateset(args.train, args.validate)
