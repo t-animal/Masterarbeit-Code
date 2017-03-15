@@ -71,7 +71,7 @@ if __name__ == "__main__":
 		modelPaths = {}
 
 	parser = argparse.ArgumentParser(description='Generate train and testsets')
-	parser.add_argument("--human", help="", action="store_true")
+	parser.add_argument("--json", help="", action="store_true")
 	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
 	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
@@ -143,7 +143,7 @@ if __name__ == "__main__":
 			classifier.plot(getAllFiles(args.plot), func)
 
 	if result:
-		if args.human:
+		if not args.json:
 			if args.test:
 				print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
 						format(args.train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
