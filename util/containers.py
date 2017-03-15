@@ -173,8 +173,7 @@ class TestresultContainer():
 	def oneline(self):
 		""" Returns a short oneliner describing the results"""
 		vals = self.getDict()
-		pValue = scipy.stats.binom.sf(vals["correct"], vals["tested"], 0.5) - \
-					 scipy.stats.binom.pmf(vals["correct"], vals["tested"], 0.5)/2
+		pValue = scipy.stats.binom.cdf(vals["incorrect"], vals["tested"], 0.5)
 		return "{} correct out of {} ({:6.2f}%, p={:6.3})".format(vals["correct"], vals["tested"],
 				                                                   vals["correct-percentage"], pValue)
 
