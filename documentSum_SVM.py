@@ -89,26 +89,6 @@ class DocSumSVMClassifier(SVMClassifier):
 		return testResult
 
 
-	def plot(self, filenames):
-		"""Plots the PCA of the document sum of the supplied files
-
-		   :param filenames: the files to plot
-		   :type filenames: iterable of strings
-		"""
-		nonArousedVectors = []
-		arousedVectors = []
-
-		for filename in filenames:
-			fileSum = self._getDescribingVectors(filename)[0]
-
-			if isAroused(filename):
-				arousedVectors.append(fileSum)
-			else:
-				nonArousedVectors.append(fileSum)
-
-		plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
-
-
 if __name__ == "__main__":
 
 	import argparse, sys

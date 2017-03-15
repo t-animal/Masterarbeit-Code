@@ -8,7 +8,7 @@ import re
 from sklearn import svm as SVM
 from gensim.models import KeyedVectors
 from util import softmax, isAroused
-from util.plot import plotPCA
+from util.plot import plotPCA, plotLDA, plotHistogram, plotVectorList
 from util.containers import LazyModel, TestresultContainer
 
 
@@ -110,6 +110,40 @@ class Classifier():
 		"""
 		raise NotImplemented()
 
+	def plot(self, filenames, plotFunc="PCA"):
+		"""Plots document vectors of the supplied files. Thi function can
+		   plot the PCA and LDA (each 2D and 3D), the histogram of the
+		   vectors and the vectors as a matrix
+
+		   :param filenames: the files to plot
+		   :type filenames: iterable of strings
+
+		   :param plotFunc: the plotting function name to use
+		   :type filenames: one of ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"]
+		"""
+		nonArousedVectors = []
+		arousedVectors = []
+
+		for filename in filenames:
+			fileSum = self._getDescribingVectors(filename)[0]
+
+			if isAroused(filename):
+				arousedVectors.append(fileSum)
+			else:
+				nonArousedVectors.append(fileSum)
+
+		if plotFunc == "PCA":
+			plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
+		if plotFunc == "PCA3":
+			plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused", 3)
+		if plotFunc == "PCA":
+			plotLDA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
+		if plotFunc == "LDA3":
+			plotLDA(nonArousedVectors, arousedVectors, "non aroused", "aroused", 3)
+		if plotFunc == "MAT":
+			plotVectorList(arousedVectors, nonArousedVectors)
+		if plotFunc == "HIST":
+			plotHistogram(arousedVectors, nonArousedVectors)
 
 
 class SVMClassifier(Classifier):
