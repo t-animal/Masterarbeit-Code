@@ -13,7 +13,9 @@ _dataSets = {
 	"Winter": os.path.dirname(os.path.abspath(__file__)) + "/../data/Winter_arousal_stories/",
 	"Study2": os.path.dirname(os.path.abspath(__file__)) + "/../data/Study_2_PSE_files/",
 	"Atkinson": os.path.dirname(os.path.abspath(__file__)) + "/../data/AtkinsonEtAl_nAff_cleaned/",
-	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/"
+	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/",
+	"McClelland": os.path.dirname(os.path.abspath(__file__)) + "/../data/McClelland_et_al_nAch_cleaned/",
+	"Wirth": os.path.dirname(os.path.abspath(__file__)) + "/../data/PSE_WirthSchultheiss2006/"
 }
 
 def getAllFiles(dataSets):

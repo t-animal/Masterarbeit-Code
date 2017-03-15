@@ -27,4 +27,10 @@ def isAroused(path):
 	if "McAdams_1980_nAff_cleaned" in folder:
 		return int(filename[:3]) not in ([9, 10, 11, 12] + list(range(85, 123)))
 
+	if "McClelland_et_al_nAch_cleaned" in folder:
+		return not "E" in filename
+
+	if "PSE_WirthSchultheiss2006" in folder:
+		return "Bridges" in filename
+
 	raise ValueError("Unknown path")
