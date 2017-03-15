@@ -3,10 +3,11 @@
 
 import logging as log
 import os
+from util import isAroused
 from util.classifiers import Classifier
 from util.containers import TestresultContainer
 
-from util.argGenerator import generateTrainAndValidateset, generateTestset, _dataSets
+from util.argGenerator import generateTrainAndValidateset, generateTestset, _dataSets, getAllFiles
 
 class CacheGenerator(Classifier):
 	"""This is a short class designed to be run once per model on all datasets
@@ -68,6 +69,8 @@ if __name__ == "__main__":
 	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
 	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
 	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
+	parser.add_argument("--plot", help="Plot the vectors of a dataset", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
+	parser.add_argument("--plotFunction", help="Which plotting function to use", nargs="+", choices=["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"], default="PCA")
 	parser.add_argument("--store", help="")
 	parser.add_argument("--load", help="")
 	parser.add_argument("--classifier", "-c", help="", required=True).completer = ClassifierCompleter
@@ -89,8 +92,8 @@ if __name__ == "__main__":
 	if args.test and "all" in args.test:
 		args.test = list(_dataSets.keys())
 
-	if not (bool(args.train) ^ bool(args.load)):
-		parser.error("Please supply either train or load and don't supply both")
+	if not (bool(args.train) ^ bool(args.load) or args.plot):
+		parser.error("Please supply either train or load (and don't supply both) or plot")
 		sys.exit(1)
 
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -109,28 +112,41 @@ if __name__ == "__main__":
 	classifier = classifierClass(*args.classifierArgs)
 	if bool(args.train):
 		classifier.train(trainFiles)
-	else:
+	elif bool(args.load):
 		classifier.load(args.load)
 
 	if args.store:
 		classifier.store(args.store)
 
+	result = None
 	if args.test:
-		result = classifier.test(generateTestset(args.test))
-	else:
+		testFiles = generateTestset(args.test)
+		result = classifier.test(testFiles)
+	elif args.validate:
 		#validate the results on the validate set as if it were the test set
 		result = classifier.test(validateFiles)
 
-	if args.human:
-		if args.test:
-			print("Results for training on {} and testing on {}".format(args.train, args.test))
-		else:
-			print("Results for training on {} and validating on {}".format(args.train, args.validate))
+	if args.plot:
+		if "all" in args.plot:
+			args.plot = _dataSets.keys()
+		for func in args.plotFunction:
+			classifier.plot(getAllFiles(args.plot), func)
 
-		if os.isatty(sys.stdout.fileno()):
-			print("\033[1m"+result.oneline()+"\033[0m")
+	if result:
+		if args.human:
+			if args.test:
+				print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
+						format(args.train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
+						       len(list(filter(lambda x: not isAroused(x), trainFiles))), args.test))
+			else:
+				print("Results for training on {} ({}, {} aroused, {} not) and validating on {}".
+						format(args.train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
+						        len(list(filter(lambda x: not isAroused(x), trainFiles))), args.validate))
+
+			if os.isatty(sys.stdout.fileno()):
+				print("\033[1m"+result.oneline()+"\033[0m")
+			else:
+				print(result.oneline())
+			print(result)
 		else:
-			print(result.oneline())
-		print(result)
-	else:
-		print(result.getJSON())
+			print(result.getJSON())

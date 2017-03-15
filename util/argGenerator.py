@@ -16,6 +16,19 @@ _dataSets = {
 	"McAdams": os.path.dirname(os.path.abspath(__file__)) + "/../data/McAdams_1980_nAff_cleaned/"
 }
 
+def getAllFiles(dataSets):
+	files = []
+	for dataSet in dataSets:
+		if dataSet not in _dataSets:
+			raise ValueError("Not a valid test set: " + dataSet)
+
+		files += map(lambda x: _dataSets[dataSet] + "test/" + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet] + "test/")))
+		files += map(lambda x: _dataSets[dataSet] + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet])))
+
+	return files
+
 
 def generateTestset(testSets):
 	testFiles = []
