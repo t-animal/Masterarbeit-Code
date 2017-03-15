@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 import matplotlib
 
 matplotlib.use('TkAgg')
@@ -48,6 +49,30 @@ def plot3D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 
 	ax.scatter(X_r[mask1, 0], X_r[mask1, 1], X_r[mask1, 2], c="r", label=class1Label, marker="o")
 	ax.scatter(X_r[mask2, 0], X_r[mask2, 1], X_r[mask2, 2], c="g", label=class2Label, marker="^")
+
+	plt.show()
+
+
+def plotHistogram(class1, class2=None):
+	fig, ax = plt.subplots()
+	bins = sorted(map(lambda x: -x/1000, range(100, 5000, 100)) + map(lambda x: x/1000, range(0, 5000, 100)))
+	ax.hist(class1, bins=bins, color="r"*len(class1))
+	if class2:
+		ax.hist(class2, bins=bins, color="g"*len(class2))
+	plt.show()
+
+
+def plotVectorList(class1, class2=None):
+	if class2:
+		class1 = class1 + [np.array([-99]*class1[0].shape[0])]*2 + class2
+	vectors = np.transpose(np.array(class1))
+
+	cmap = matplotlib.cm.get_cmap("viridis")
+	cmap.set_over("r")
+	cmap.set_under("r")
+
+	plt.matshow(vectors, vmin=-3, vmax=3, norm=matplotlib.colors.SymLogNorm(0.001))
+	plt.colorbar()
 
 	plt.show()
 
