@@ -86,7 +86,7 @@ class Classifier():
 					try:
 						translatedFile.append((token, self.model[token]))
 					except KeyError:
-						log.debug("token '%s' not in vocabulary", token)
+						log.warn("token '%s' not in vocabulary", token)
 			try:
 				with open(cachePath, "wb") as cacheFile:
 					log.debug("storing vectorized file %s to cache", filename)
