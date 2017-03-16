@@ -25,6 +25,22 @@ class CacheGenerator(Classifier):
 		return TestresultContainer(True, False, "", "")
 
 
+class ChoicesContainer:
+	def __init__(self, vals):
+		self.vals = list(vals) + ["all"]
+
+	def __contains__(self, val):
+		if "." in val:
+			val = val[:val.index(".")]
+		return val in self.vals
+
+	def __iter__(self):
+		return self.vals.__iter__()
+
+def classifierCompleter(prefix, **kwargs):
+	return filter(lambda x: x.startswith(prefix), getAllClassifiers())
+
+
 def getClassifierClass(className, package="."):
 	if not package == ".":
 		package += "."
@@ -45,23 +61,57 @@ def getAllClassifiers(package="."):
 			if line.startswith("class") and ("(SVMClassifier)" in line or "(Classifier)" in line):
 				yield line[6:line.index("(")]
 
+
+def trainAndTest(classifier, train, test, load=None, store=None):
+	"""
+		Trains a given classifier on the given trainSets and tests it on the given testSets
+	"""
+
+	if load is None:
+		classifier.train(trainFiles)
+	else:
+		classifier.load(load)
+
+	if store is not None:
+		classifier.store(store)
+
+	return classifier.test(testFiles)
+
+def checkForAll(dataSetsList):
+	"""Returns all available datasets if the dataSetsList is an list and it contains
+	the word "all" otherwise returns the dataSetsList unchanged"""
+	if type(dataSetsList) is not list:
+		return dataSetsList
+
+	for dataSet in dataSetsList:
+		dataSet = dataSet.split(".")[0]
+		if dataSet == "all":
+			percentage = "." + dataSet.split(".")[1] if "." in dataSet else ""
+			return list(map(lambda x: x + percentage, _dataSets.keys()))
+
+	return dataSetsList
+
+def printResult(result, json, train, validate, test=None):
+	if not json:
+		if test is not None:
+			print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
+					format(train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
+					       len(list(filter(lambda x: not isAroused(x), trainFiles))), test))
+		else:
+			print("Results for training on {} ({}, {} aroused, {} not) and validating on {}".
+					format(train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
+					        len(list(filter(lambda x: not isAroused(x), trainFiles))), validate))
+
+		if os.isatty(sys.stdout.fileno()):
+			print("\033[1m"+result.oneline()+"\033[0m")
+		else:
+			print(result.oneline())
+		print(result)
+	else:
+		print(result.getJSON())
+
 if __name__ == "__main__":
 	import argcomplete, argparse, configparser, sys
-
-	class ChoicesContainer:
-		def __init__(self, vals):
-			self.vals = list(vals) + ["all"]
-
-		def __contains__(self, val):
-			if "." in val:
-				val = val[:val.index(".")]
-			return val in self.vals
-
-		def __iter__(self):
-			return self.vals.__iter__()
-
-	def ClassifierCompleter(prefix, **kwargs):
-		return filter(lambda x: x.startswith(prefix), getAllClassifiers())
 
 	configParser = configparser.ConfigParser()
 	configParser.read(os.path.split(__file__)[0] + os.sep + "tester.ini")
@@ -70,71 +120,65 @@ if __name__ == "__main__":
 	else:
 		modelPaths = {}
 
-	parser = argparse.ArgumentParser(description='Generate train and testsets')
-	parser.add_argument("--json", help="", action="store_true")
-	parser.add_argument("-v", help="Be more verbose (-vv for max verbosity)", action="count", default=0)
-	parser.add_argument("--train", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
-	parser.add_argument("--test", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())))
-	parser.add_argument("--validate", help="", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
-	parser.add_argument("--plot", help="Plot the vectors of a dataset", nargs="+", choices=ChoicesContainer(list(_dataSets.keys())), default=[])
-	parser.add_argument("--plotFunction", help="Which plotting function to use", nargs="+", choices=["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"], default="PCA")
-	parser.add_argument("--store", help="")
-	parser.add_argument("--load", help="")
-	parser.add_argument("--classifier", "-c", help="", required=True).completer = ClassifierCompleter
-	parser.add_argument("--modelPath", "-m", help="Load the model path from 'tester.ini' and pass it to the classifier", choices=list(modelPaths.keys()))
-	parser.add_argument("classifierArgs", help="additional arguments to pass to the classifier (empty to list)", nargs="*")
+	parser = argparse.ArgumentParser(description='Train, validate and test classifiers')
+	parser.add_argument("--json",  help = "Display the output as json",              action = "store_true")
+	parser.add_argument("-v",      help = "Be more verbose (-vv for max verbosity)", action = "count", default = 0)
+	parser.add_argument("--train", help = "The datasets to train on",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+	parser.add_argument("--test",  help = "The datasets to test on (overrides any validation sets!)",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()))
+	parser.add_argument("--validate", help = "The datasets to validate on",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+	parser.add_argument("--plot",  help = "Plot the vectors of a dataset",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+	parser.add_argument("--plotFunction", help = "Which plotting function to use",
+	                               nargs = "+", choices = ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"], default = "PCA")
+	parser.add_argument("--store", help = "Store the trained classifier to this path")
+	parser.add_argument("--load",  help = "Load a pre-trained classifier from this path")
+	parser.add_argument("--classifier", "-c", help = "Which classifier to use", required = True) \
+	                   .completer = classifierCompleter
+	parser.add_argument("--modelPath", "-m",  help = "Load the model path from 'tester.ini' and pass it to the classifier",
+	                               choices = list(modelPaths.keys()))
+	parser.add_argument("classifierArgs",     help = "additional arguments to pass to the classifier (empty to list)",
+	                               nargs = "*")
 
 	argcomplete.autocomplete(parser)
 	args = parser.parse_args()
+
+	#sanitize the arguments
 	if not args.validate and not args.test:
 		args.validate = args.train
 
 	if args.modelPath:
 		args.classifierArgs = [modelPaths[args.modelPath]] + args.classifierArgs
 
-	if any(map(lambda x: "all" in x, args.validate)):
-		percentage = "."+args.train.split(".") if "." in args.train else ""
-		args.train = list(map(lambda x: x+percentage, _dataSets.keys()))
-
-	if any(map(lambda x: "all" in x, args.validate)):
-		percentage = "."+args.validate.split(".") if "." in args.validate else ""
-		args.validate = list(map(lambda x: x+percentage, _dataSets.keys()))
-
-	if args.test and "all" in args.test:
-		args.test = list(_dataSets.keys())
-
-	if not (bool(args.train) ^ bool(args.load) or args.plot):
-		parser.error("Please supply either train or load (and don't supply both) or plot")
-		sys.exit(1)
+	args.train = checkForAll(args.train)
+	args.validate = checkForAll(args.validate)
+	args.test = checkForAll(args.test)
 
 	log.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
 
+	#Perform sanity checks on the arguments
+	if not (bool(args.train) ^ bool(args.load) or args.plot):
+		parser.error("Please supply either train or load (and don't supply both) or plot")
+		sys.exit(1)
+
+	if args.load and not (args.validate or args.test):
+		parser.error("Loading a stored classifier and not supplying validation or testing!")
+		sys.exit(1)
+
 	if args.test and args.validate:
 		log.warning("Supplying test sets overrides the validate sets!")
 
+
+
+	#actual computation begins here
 	classifierClass = getClassifierClass(args.classifier)
-	trainFiles, validateFiles = generateTrainAndValidateset(args.train, args.validate)
+	classifier = classifierClass(*args.classifierArgs)
 
 	if len(args.classifierArgs) == 0:
 		print(classifierClass.__init__.__code__.co_varnames[1:])
-
-	classifier = classifierClass(*args.classifierArgs)
-	if bool(args.train):
-		classifier.train(trainFiles)
-	elif bool(args.load):
-		classifier.load(args.load)
-
-	if args.store:
-		classifier.store(args.store)
-
-	result = None
-	if args.test:
-		testFiles = generateTestset(args.test)
-		result = classifier.test(testFiles)
-	elif args.validate:
-		#validate the results on the validate set as if it were the test set
-		result = classifier.test(validateFiles)
 
 	if args.plot:
 		if "all" in args.plot:
@@ -142,21 +186,13 @@ if __name__ == "__main__":
 		for func in args.plotFunction:
 			classifier.plot(getAllFiles(args.plot), func)
 
-	if result:
-		if not args.json:
-			if args.test:
-				print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
-						format(args.train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
-						       len(list(filter(lambda x: not isAroused(x), trainFiles))), args.test))
-			else:
-				print("Results for training on {} ({}, {} aroused, {} not) and validating on {}".
-						format(args.train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
-						        len(list(filter(lambda x: not isAroused(x), trainFiles))), args.validate))
+	if args.train or args.load:
+		trainFiles, validateFiles = generateTrainAndValidateset(args.train, args.validate)
 
-			if os.isatty(sys.stdout.fileno()):
-				print("\033[1m"+result.oneline()+"\033[0m")
-			else:
-				print(result.oneline())
-			print(result)
+		if args.test:
+			testFiles = generateTestset(args.test)
 		else:
-			print(result.getJSON())
+			testFiles = validateFiles
+
+		result = trainAndTest(classifier, trainFiles, testFiles, args.load, args.store)
+		printResult(result, args.json, args.train, args.validate, args.test)
