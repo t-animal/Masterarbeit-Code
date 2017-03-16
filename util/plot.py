@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-log = logging.getLogger("de.t_animal.MA.util.pcaPlotter")
+log = logging.getLogger("de.t_animal.MA.util.plot")
 
 def plot2D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 	X = class1 + class2
