@@ -1,5 +1,6 @@
 import json
 import logging
+import numpy
 import scipy
 import textwrap
 
@@ -205,3 +206,20 @@ class TestresultContainer():
 				                                 vals["false-positive-" + self.label2 + "-percentage"])
 
 		return textwrap.dedent(ret)
+
+
+class CrossValidationResultContainer:
+
+	def __init__(self):
+		self.results = []
+
+	def addResult(self, result):
+		self.results.append(result)
+
+	def oneline(self):
+		percentages = numpy.array(list(map(lambda x: x.getDict()["correct-percentage"], self.results)))
+
+		return "Mean correct percentage: {}. Standard deviation: {}".format(percentages.mean(), percentages.std())
+
+	def __str__(self):
+		return "TODO"

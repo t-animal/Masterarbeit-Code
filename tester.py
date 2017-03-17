@@ -5,9 +5,13 @@ import logging as log
 import os
 from util import isAroused
 from util.classifiers import Classifier
-from util.containers import TestresultContainer
+from util.containers import CrossValidationResultContainer, TestresultContainer
 
-from util.argGenerator import generateTrainAndValidateset, generateTestset, _dataSets, getAllFiles
+from util.argGenerator import getAllFiles, \
+                              generateCrossValidationSets, \
+                              generateTrainAndValidateset, \
+                              generateTestset, \
+                              _dataSets
 
 class CacheGenerator(Classifier):
 	"""This is a short class designed to be run once per model on all datasets
@@ -68,14 +72,14 @@ def trainAndTest(classifier, train, test, load=None, store=None):
 	"""
 
 	if load is None:
-		classifier.train(trainFiles)
+		classifier.train(train)
 	else:
 		classifier.load(load)
 
 	if store is not None:
 		classifier.store(store)
 
-	return classifier.test(testFiles)
+	return classifier.test(test)
 
 def checkForAll(dataSetsList):
 	"""Returns all available datasets if the dataSetsList is an list and it contains
@@ -91,7 +95,7 @@ def checkForAll(dataSetsList):
 
 	return dataSetsList
 
-def printResult(result, json, train, validate, test=None):
+def printResult(result, json, train, trainFiles, validate, test=None):
 	if not json:
 		if test is not None:
 			print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
@@ -123,18 +127,25 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Train, validate and test classifiers')
 	parser.add_argument("--json",  help = "Display the output as json",              action = "store_true")
 	parser.add_argument("-v",      help = "Be more verbose (-vv for max verbosity)", action = "count", default = 0)
+
 	parser.add_argument("--train", help = "The datasets to train on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 	parser.add_argument("--test",  help = "The datasets to test on (overrides any validation sets!)",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()))
 	parser.add_argument("--validate", help = "The datasets to validate on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+
+	parser.add_argument("--crossValidate", help = "The datasets to crossvalidate on",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+
 	parser.add_argument("--plot",  help = "Plot the vectors of a dataset",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 	parser.add_argument("--plotFunction", help = "Which plotting function to use",
 	                               nargs = "+", choices = ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"], default = "PCA")
+
 	parser.add_argument("--store", help = "Store the trained classifier to this path")
 	parser.add_argument("--load",  help = "Load a pre-trained classifier from this path")
+
 	parser.add_argument("--classifier", "-c", help = "Which classifier to use", required = True) \
 	                   .completer = classifierCompleter
 	parser.add_argument("--modelPath", "-m",  help = "Load the model path from 'tester.ini' and pass it to the classifier",
@@ -160,7 +171,7 @@ if __name__ == "__main__":
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
 
 	#Perform sanity checks on the arguments
-	if not (bool(args.train) ^ bool(args.load) or args.plot):
+	if not (bool(args.train) ^ bool(args.load) or args.plot or args.crossValidate):
 		parser.error("Please supply either train or load (and don't supply both) or plot")
 		sys.exit(1)
 
@@ -195,4 +206,16 @@ if __name__ == "__main__":
 			testFiles = validateFiles
 
 		result = trainAndTest(classifier, trainFiles, testFiles, args.load, args.store)
-		printResult(result, args.json, args.train, args.validate, args.test)
+		printResult(result, args.json, args.train, trainFiles, args.validate, args.test)
+
+
+	if args.crossValidate:
+		crossSet = generateCrossValidationSets(args.crossValidate)
+
+		result = CrossValidationResultContainer()
+
+		for crossTestSet in crossSet:
+			for crossValidateSet in crossTestSet["crossValidate"]:
+				result.addResult(trainAndTest(classifier, crossValidateSet["train"], crossValidateSet["validate"]))
+
+		printResult(result, args.json, args.crossValidate, crossValidateSet["train"], args.crossValidate)
