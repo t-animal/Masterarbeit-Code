@@ -212,7 +212,7 @@ if __name__ == "__main__":
 	if args.crossValidate:
 		crossSet = generateCrossValidationSets(args.crossValidate)
 
-		result = CrossValidationResultContainer()
+		result = CrossValidationResultContainer("aroused", "nonAroused")
 
 		for crossTestSet in crossSet:
 			for crossValidateSet in crossTestSet["crossValidate"]:

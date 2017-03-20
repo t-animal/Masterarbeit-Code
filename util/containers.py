@@ -135,6 +135,10 @@ class TestresultContainer():
 		except ZeroDivisionError:
 			correct_percentage = float("nan")
 		try:
+			incorrect_percentage = float(self.incorrect) / total * 100
+		except ZeroDivisionError:
+			incorrect_percentage = float("nan")
+		try:
 			true_pos_class1_percentage = 100 * float(self.true_pos_class1) / total_class1
 			false_pos_class1_percentage = 100 * float(self.false_pos_class1) / total_class1
 		except ZeroDivisionError:
@@ -158,6 +162,7 @@ class TestresultContainer():
 			"true-positive-" + self.label1 + "-percentage": true_pos_class1_percentage,
 			"true-positive-" + self.label2 + "-percentage": true_pos_class2_percentage,
 			"incorrect": self.incorrect,
+			"incorrect-percentage": incorrect_percentage,
 			"false-positive-" + self.label1: self.false_pos_class1,
 			"false-positive-" + self.label2: self.false_pos_class2,
 			"false-positive-" + self.label1 + "-percentage": false_pos_class1_percentage,
@@ -210,8 +215,11 @@ class TestresultContainer():
 
 class CrossValidationResultContainer:
 
-	def __init__(self):
+	def __init__(self, class1Label=None, class2Label=None):
 		self.results = []
+
+		self.label1 = class1Label if class1Label is not None else "class1"
+		self.label2 = class2Label if class2Label is not None else "class2"
 
 	def addResult(self, result):
 		self.results.append(result)
@@ -221,5 +229,59 @@ class CrossValidationResultContainer:
 
 		return "Mean correct percentage: {}. Standard deviation: {}".format(percentages.mean(), percentages.std())
 
+	def getDict(self):
+		tested = sum(map(lambda x: x.getDict()["tested"], self.results))
+		tested_class1 = sum(map(lambda x: x.getDict()["tested-" + self.label1], self.results))
+		tested_class2 = sum(map(lambda x: x.getDict()["tested-" + self.label2], self.results))
+		correct_percentages = numpy.array(list(map(lambda x: x.getDict()["correct-percentage"], self.results)))
+		incorrect_percentages = numpy.array(list(map(lambda x: x.getDict()["incorrect-percentage"], self.results)))
+		true_pos_class1_percentages = numpy.array(list(map(lambda x: x.getDict()["true-positive-" + self.label1 + "-percentage"], self.results)))
+		true_pos_class2_percentages = numpy.array(list(map(lambda x: x.getDict()["true-positive-" + self.label2 + "-percentage"], self.results)))
+		false_pos_class1_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label1 + "-percentage"], self.results)))
+		false_pos_class2_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label2 + "-percentage"], self.results)))
+
+		return {
+			"tested": tested,
+			"tested-" + self.label1: tested_class1,
+			"tested-" + self.label2: tested_class2,
+			"correct-percentage-mean": correct_percentages.mean(),
+			"correct-percentage-stddev": correct_percentages.std(),
+			"true-positive-" + self.label1 + "-percentage-mean": true_pos_class1_percentages.mean(),
+			"true-positive-" + self.label1 + "-percentage-stddev": true_pos_class1_percentages.std(),
+			"true-positive-" + self.label2 + "-percentage-mean": true_pos_class2_percentages.mean(),
+			"true-positive-" + self.label2 + "-percentage-stddev": true_pos_class2_percentages.std(),
+			"incorrect-percentage-mean": incorrect_percentages.mean(),
+			"incorrect-percentage-stddev": incorrect_percentages.std(),
+			"false-positive-" + self.label1 + "-percentage-mean": false_pos_class1_percentages.mean(),
+			"false-positive-" + self.label1 + "-percentage-stddev": false_pos_class1_percentages.std(),
+			"false-positive-" + self.label2 + "-percentage-mean": false_pos_class2_percentages.mean(),
+			"false-positive-" + self.label2 + "-percentage-stddev": false_pos_class2_percentages.std()
+		}
+
 	def __str__(self):
-		return "TODO"
+		""" Returns the results in a human readable form """
+		vals = self.getDict()
+		padLabel1 = " " * max(0, len(self.label2) - len(self.label1))
+		padLabel2 = " " * max(0, len(self.label1) - len(self.label2))
+		padNoLabel = " " * max(len(self.label1), len(self.label2))
+		ret = """\
+				Tested:       {}  {} ({}: {}, {}: {})
+				Correct:      {}   {:6.2f}% ± {:6.2f}
+				Incorrect:    {}   {:6.2f}% ± {:6.2f}
+				True positive {}: {} {:6.2f}% ± {:6.2f}
+				True positive {}: {} {:6.2f}% ± {:6.2f}
+				False positive {}:{} {:6.2f}% ± {:6.2f}
+				False positive {}:{} {:6.2f}% ± {:6.2f}""".format(padNoLabel, vals["tested"], self.label1, vals["tested-" + self.label1],
+				                                 self.label2, vals["tested-" + self.label2], #endTested
+				                                 padNoLabel, vals["correct-percentage-mean"], vals["correct-percentage-stddev"], #endCorrect
+				                                 padNoLabel, vals["incorrect-percentage-mean"], vals["incorrect-percentage-stddev"], #endIncorrect
+				                                 self.label1, padLabel1, vals["true-positive-" + self.label1 + "-percentage-mean"],
+				                                 vals["true-positive-" + self.label1 + "-percentage-stddev"], #endTP1
+				                                 self.label2, padLabel2, vals["true-positive-" + self.label2 + "-percentage-mean"],
+				                                 vals["true-positive-" + self.label2 + "-percentage-stddev"],  #endTP2
+				                                 self.label1, padLabel1, vals["false-positive-" + self.label1 + "-percentage-mean"],
+				                                 vals["false-positive-" + self.label1 + "-percentage-stddev"], #endFP1
+				                                 self.label2, padLabel2, vals["false-positive-" + self.label2 + "-percentage-mean"],
+				                                 vals["false-positive-" + self.label2 + "-percentage-stddev"])
+
+		return textwrap.dedent(ret)
