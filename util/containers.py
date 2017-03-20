@@ -38,6 +38,12 @@ class LazyModel():
 		self.__dict__ = model.__dict__
 
 	def __getattr__(self, attr):
+		LazyModel.log.debug("attr %s requested, instantiating model", attr)
+
+		if attr == "__getstate__" or attr == "__setstate__":
+			#When pickled, don't instantiate first, but pickle the LazyModel object
+			raise AttributeError()
+
 		self._instantiate()
 		return getattr(self, attr)
 
