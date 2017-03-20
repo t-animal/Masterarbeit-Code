@@ -30,7 +30,7 @@ def getAllFiles(dataSets):
 	files = []
 	for dataSet in dataSets:
 		if dataSet not in _dataSets:
-			raise ValueError("Not a valid test set: " + dataSet)
+			raise ValueError("Not a valid data set: " + dataSet)
 
 		files += map(lambda x: _dataSets[dataSet] + "test/" + x,
 							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet] + "test/")))
@@ -150,6 +150,10 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 	in an empty training set). If no percentages are given, the sets will be partioned into 80%
 	training and 20% validate sets.
 
+	Instead of a percentage ".all" may be appended to a data set, too. This will use all files
+	(train, validate and test) of that data set and turn off security measures (1) and (2) for all
+	data sets.
+
 	:param dataSets: the data sets to get the training files of
 	:type dataSets: list of strings (entries must be in _dataSets.keys()), may contain . (see above)
 	:param validateSets: the data sets to get the validating files of
@@ -163,6 +167,12 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 	for validateSet in validateSets:
 		if "." in validateSet:
 			validateSet, percentage = validateSet.split(".")
+
+			if percentage == "all":
+				#overwrite any further checks and security measures, just append all files:
+				validateFiles += getAllFiles([validateSet])
+				continue
+
 			percentage = int(percentage)
 		else:
 			percentage = validatePercentage
@@ -184,12 +194,16 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 
 	for trainSet in trainSets:
 		if "." in trainSet:
-			trainSet, trainPercentage = trainSet.split(".", 1)
-			if "." in trainPercentage:
-				trainPercentage, validatePercentage = map(int, trainPercentage.split("."))
-			trainPercentage = int(trainPercentage)
+			trainSet, percentage = trainSet.split(".", 1)
+
+			if percentage == "all":
+				#overwrite any further checks and security measures, just append all files:
+				trainFiles += getAllFiles([trainSet])
+				continue
+
+			percentage = int(percentage)
 		else:
-			trainPercentage = 100 - validatePercentage
+			percentage = 100 - validatePercentage
 			validatePercentage = validatePercentage
 
 		if trainSet not in _dataSets:
@@ -203,13 +217,14 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		trainFiles += filter(lambda x: x not in validateFiles, allAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
-		trainFiles += filter(lambda x: x not in validateFiles, allNonAroused[:int(trainPercentage * len(allFiles) / 100 / 2)])
+		trainFiles += filter(lambda x: x not in validateFiles, allAroused[:int(percentage * len(allFiles) / 100 / 2)])
+		trainFiles += filter(lambda x: x not in validateFiles, allNonAroused[:int(percentage * len(allFiles) / 100 / 2)])
 
-	#assert no validatefiles are also trainfiles
-	assert(set(trainFiles) - set(validateFiles) == set(trainFiles))
-	#assert an equal amount of aroused and non-aroused validatefiles
-	assert(len(list(filter(isAroused, validateFiles))) == len(validateFiles) / 2)
+	if not any(map(lambda x: x.endswith(".all"), trainSets + validateSets)):
+		#assert no validatefiles are also trainfiles
+		assert(set(trainFiles) - set(validateFiles) == set(trainFiles))
+		#assert an equal amount of aroused and non-aroused validatefiles
+		assert(len(list(filter(isAroused, validateFiles))) == len(validateFiles) / 2)
 
 	return trainFiles, validateFiles
 
