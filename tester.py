@@ -137,6 +137,8 @@ if __name__ == "__main__":
 
 	parser.add_argument("--crossValidate", help = "The datasets to crossvalidate on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
+	parser.add_argument("--crossTest", help = "The datasets to crosstest on",
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 
 	parser.add_argument("--plot",  help = "Plot the vectors of a dataset",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
@@ -171,7 +173,7 @@ if __name__ == "__main__":
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
 
 	#Perform sanity checks on the arguments
-	if not (bool(args.train) ^ bool(args.load) or args.plot or args.crossValidate):
+	if not (bool(args.train) ^ bool(args.load) or args.plot or args.crossValidate or args.crossTest):
 		parser.error("Please supply either train or load (and don't supply both) or plot")
 		sys.exit(1)
 
@@ -219,3 +221,15 @@ if __name__ == "__main__":
 				result.addResult(trainAndTest(classifier, crossValidateSet["train"], crossValidateSet["validate"]))
 
 		printResult(result, args.json, args.crossValidate, crossValidateSet["train"], args.crossValidate)
+
+
+	if args.crossTest:
+		crossSet = generateCrossValidationSets(args.crossTest)
+
+		result = CrossValidationResultContainer("aroused", "nonAroused")
+
+		for crossTestSet in crossSet:
+			for crossValidateSet in crossTestSet["crossValidate"]:
+				result.addResult(trainAndTest(classifier, crossValidateSet["train"], crossTestSet["test"]))
+
+		printResult(result, args.json, args.crossTest, crossValidateSet["train"], None, args.crossTest)
