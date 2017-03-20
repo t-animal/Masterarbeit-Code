@@ -12,10 +12,12 @@ from util import softmax, isAroused
 from util.plot import plotPCA, plotLDA, plotHistogram, plotVectorList
 from util.containers import LazyModel, TestresultContainer
 
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils.validation import check_X_y, check_is_fitted
 
 log = logging.getLogger("de.t_animal.MA.util.classifiers")
 
-class Classifier():
+class Classifier(BaseEstimator, ClassifierMixin):
 	""" A classifier base class: It vectorizes a file.
 	"""
 
@@ -36,6 +38,25 @@ class Classifier():
 		"""
 		raise NotImplemented()
 
+	def fit(self, X, y):
+		"""Fit method as required by the scikit-learn estimator interface"""
+
+		# import pdb
+		# pdb.set_trace()
+		# X, y = check_X_y(X, y)
+		self.X_ = X
+		self.y_ = y
+
+		self.train(X)
+
+		return self
+
+	def predict(self, X):
+		"""Predict method as required by the scikit-learn predictor interface"""
+
+		check_is_fitted(self, ['X_', 'y_'])
+
+		raise NotImplemented()
 
 	def train(self, trainFilenames):
 		"""Abstract method, do your magic here.

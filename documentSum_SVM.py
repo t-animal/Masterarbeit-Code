@@ -89,6 +89,14 @@ class DocSumSVMClassifier(SVMClassifier):
 		return testResult
 
 
+	def predict(self, X):
+		"""Predict method as required by the scikit-learn predictor interface"""
+
+		check_is_fitted(self, ['X_', 'y_'])
+
+		return self.svm.predict(list(map(lambda x: self._getDescribingVectors(x)[0], X)))
+
+
 if __name__ == "__main__":
 
 	import argparse, sys
