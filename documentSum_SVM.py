@@ -19,10 +19,11 @@ class DocSumSVMClassifier(SVMClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath, power = 3, min_probability = 0):
+	def __init__(self, modelPath, power = 3, min_probability = 0, SVM_C = 2.5):
 		super().__init__(modelPath)
 		self.power = int(power)
 		self.min_probability = float(min_probability)
+		self.SVM_C = float(SVM_C)
 
 	def _generateDescribingVectors(self, filename):
 		"""Vectorizes a file, averages the vectors
@@ -49,7 +50,7 @@ class DocSumSVMClassifier(SVMClassifier):
 		yield fileSum
 
 	def train(self, trainFilenames):
-		super().train(trainFilenames, {"probability": self.min_probability > 0, "random_state": 42, "C": 2.5, "class_weight": "balanced"})
+		super().train(trainFilenames, {"probability": self.min_probability > 0, "random_state": 42, "C": self.SVM_C, "class_weight": "balanced"})
 
 
 	def test(self, testFilenames):
