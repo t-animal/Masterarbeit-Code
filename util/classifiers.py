@@ -21,7 +21,10 @@ class Classifier(BaseEstimator, ClassifierMixin):
 	""" A classifier base class: It vectorizes a file.
 	"""
 
-	def __init__(self, modelPath):
+	def __init__(self, modelPath = None):
+		if modelPath is None:
+			raise ValueError("Model Path may not be None") #this breaks scikit-learn api
+
 		self.modelPath = modelPath
 		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=modelPath.endswith("bin"))
 
@@ -201,6 +204,7 @@ class SVMClassifier(Classifier):
 		self.svm = SVM.SVC(**svmParams) # TODO: Plot results for weights
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
+
 
 	def load(self, svmPath):
 		"""Load the internal state from a path

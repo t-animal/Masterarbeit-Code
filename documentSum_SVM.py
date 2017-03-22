@@ -8,6 +8,7 @@ import pickle
 import re
 
 from sklearn import svm as SVM
+from sklearn.utils.validation import check_is_fitted
 from gensim.models import Word2Vec
 from util import softmax, isAroused
 from util.plot import plotPCA
@@ -19,7 +20,7 @@ class DocSumSVMClassifier(SVMClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath, power = 3, min_probability = 0, SVM_C = 2.5):
+	def __init__(self, modelPath = None, power = 3, min_probability = 0, SVM_C = 2.5):
 		super().__init__(modelPath)
 		self.power = int(power)
 		self.min_probability = float(min_probability)

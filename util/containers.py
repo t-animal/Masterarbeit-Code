@@ -218,6 +218,10 @@ class TestresultContainer():
 
 		return textwrap.dedent(ret)
 
+	def __lt__(self, other):
+		"""Makes this class sortable by correct percentage"""
+		return self.getDict()["correct-percentage"] < other.getDict()["correct-percentage"]
+
 
 class CrossValidationResultContainer:
 
@@ -291,3 +295,7 @@ class CrossValidationResultContainer:
 				                                 vals["false-positive-" + self.label2 + "-percentage-stddev"])
 
 		return textwrap.dedent(ret)
+
+	def __lt__(self, other):
+		"""Makes this class sortable by correct percentage mean"""
+		return self.getDict()["correct-percentage-mean"] < other.getDict()["correct-percentage-mean"]
