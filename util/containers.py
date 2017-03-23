@@ -4,6 +4,8 @@ import numpy
 import scipy
 import textwrap
 
+from collections import OrderedDict
+
 
 class LazyModel():
 	"""
@@ -157,24 +159,24 @@ class TestresultContainer():
 			true_pos_class2_percentage =  float("nan")
 			false_pos_class2_percentage =  float("nan")
 
-		return {
-			"tested": total,
-			"tested-" + self.label1: total_class1,
-			"tested-" + self.label2: total_class2,
-			"correct": self.correct,
-			"correct-percentage": correct_percentage,
-			"true-positive-" + self.label1: self.true_pos_class1,
-			"true-positive-" + self.label2: self.true_pos_class2,
-			"true-positive-" + self.label1 + "-percentage": true_pos_class1_percentage,
-			"true-positive-" + self.label2 + "-percentage": true_pos_class2_percentage,
-			"incorrect": self.incorrect,
-			"incorrect-percentage": incorrect_percentage,
-			"false-positive-" + self.label1: self.false_pos_class1,
-			"false-positive-" + self.label2: self.false_pos_class2,
-			"false-positive-" + self.label1 + "-percentage": false_pos_class1_percentage,
-			"false-positive-" + self.label2 + "-percentage": false_pos_class2_percentage,
-			"additional": self.additionalData
-		}
+		return OrderedDict([
+			("tested", total),
+			("tested-" + self.label1, total_class1),
+			("tested-" + self.label2, total_class2),
+			("correct", self.correct),
+			("correct-percentage", correct_percentage),
+			("true-positive-" + self.label1, self.true_pos_class1),
+			("true-positive-" + self.label2, self.true_pos_class2),
+			("true-positive-" + self.label1 + "-percentage", true_pos_class1_percentage),
+			("true-positive-" + self.label2 + "-percentage", true_pos_class2_percentage),
+			("incorrect", self.incorrect),
+			("incorrect-percentage", incorrect_percentage),
+			("false-positive-" + self.label1, self.false_pos_class1),
+			("false-positive-" + self.label2, self.false_pos_class2),
+			("false-positive-" + self.label1 + "-percentage", false_pos_class1_percentage),
+			("false-positive-" + self.label2 + "-percentage", false_pos_class2_percentage),
+			("additional", self.additionalData)
+		])
 
 
 	def getJSON(self):
@@ -250,23 +252,23 @@ class CrossValidationResultContainer:
 		false_pos_class1_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label1 + "-percentage"], self.results)))
 		false_pos_class2_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label2 + "-percentage"], self.results)))
 
-		return {
-			"tested": tested,
-			"tested-" + self.label1: tested_class1,
-			"tested-" + self.label2: tested_class2,
-			"correct-percentage-mean": correct_percentages.mean(),
-			"correct-percentage-stddev": correct_percentages.std(),
-			"true-positive-" + self.label1 + "-percentage-mean": true_pos_class1_percentages.mean(),
-			"true-positive-" + self.label1 + "-percentage-stddev": true_pos_class1_percentages.std(),
-			"true-positive-" + self.label2 + "-percentage-mean": true_pos_class2_percentages.mean(),
-			"true-positive-" + self.label2 + "-percentage-stddev": true_pos_class2_percentages.std(),
-			"incorrect-percentage-mean": incorrect_percentages.mean(),
-			"incorrect-percentage-stddev": incorrect_percentages.std(),
-			"false-positive-" + self.label1 + "-percentage-mean": false_pos_class1_percentages.mean(),
-			"false-positive-" + self.label1 + "-percentage-stddev": false_pos_class1_percentages.std(),
-			"false-positive-" + self.label2 + "-percentage-mean": false_pos_class2_percentages.mean(),
-			"false-positive-" + self.label2 + "-percentage-stddev": false_pos_class2_percentages.std()
-		}
+		return OrderedDict([
+			("tested", tested),
+			("tested-" + self.label1, tested_class1),
+			("tested-" + self.label2, tested_class2),
+			("correct-percentage-mean", correct_percentages.mean()),
+			("correct-percentage-stddev", correct_percentages.std()),
+			("true-positive-" + self.label1 + "-percentage-mean", true_pos_class1_percentages.mean()),
+			("true-positive-" + self.label1 + "-percentage-stddev", true_pos_class1_percentages.std()),
+			("true-positive-" + self.label2 + "-percentage-mean", true_pos_class2_percentages.mean()),
+			("true-positive-" + self.label2 + "-percentage-stddev", true_pos_class2_percentages.std()),
+			("incorrect-percentage-mean", incorrect_percentages.mean()),
+			("incorrect-percentage-stddev", incorrect_percentages.std()),
+			("false-positive-" + self.label1 + "-percentage-mean", false_pos_class1_percentages.mean()),
+			("false-positive-" + self.label1 + "-percentage-stddev", false_pos_class1_percentages.std()),
+			("false-positive-" + self.label2 + "-percentage-mean", false_pos_class2_percentages.mean()),
+			("false-positive-" + self.label2 + "-percentage-stddev", false_pos_class2_percentages.std())
+		])
 
 	def __str__(self):
 		""" Returns the results in a human readable form """

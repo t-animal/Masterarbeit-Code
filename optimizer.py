@@ -186,8 +186,10 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 		assignedTasks[workerSock] = classifierArg
 
 	try:
+		log.info("Beginn dispatching work assignments")
 		for classifierArg in kwargsList:
 			dispatchWork(classifierArg)
+		log.info("Dispatched all work assignments")
 
 		while len(assignedTasks) > 0:
 			results = []
@@ -210,6 +212,7 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 				if result["exception"] is not None:
 					log.warning("Worker %s threw an exception: %s. NOT REDISPATCHING!", worker, result["exception"])
 				else:
+					log.info("Worker %s has finished a computation (%d/%d done)", worker, len(results) + 1, len(kwargsList))
 					results.append(result["result"])
 
 	except KeyboardInterrupt:
@@ -307,7 +310,7 @@ if __name__ == "__main__":
 		print("Optimization failed")
 		sys.exit(1)
 
-	json_output = json.dumps({k: v.getDict() for k, v in result.items()})
+	json_output = json.dumps(OrderedDict([(k,v.getDict()) for k,v in result.items()]), indent = 3)
 
 	bestItem = result.popitem(last = False)
 

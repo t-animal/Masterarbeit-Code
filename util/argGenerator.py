@@ -32,10 +32,10 @@ def getAllFiles(dataSets):
 		if dataSet not in _dataSets:
 			raise ValueError("Not a valid data set: " + dataSet)
 
-		files += map(lambda x: _dataSets[dataSet] + "test/" + x,
-							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet] + "test/")))
-		files += map(lambda x: _dataSets[dataSet] + x,
-							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet])))
+		files += sorted(map(lambda x: _dataSets[dataSet] + "test/" + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet] + "test/"))))
+		files += sorted(map(lambda x: _dataSets[dataSet] + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[dataSet]))))
 
 	return files
 
@@ -129,8 +129,8 @@ def generateTestset(testSets):
 		if testSet not in _dataSets:
 			raise ValueError("Not a valid test set: " + testSet)
 
-		testFiles += map(lambda x: _dataSets[testSet] + "test/" + x,
-							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[testSet] + "test/")))
+		testFiles += sorted(map(lambda x: _dataSets[testSet] + "test/" + x,
+							filter(lambda x: x.endswith(".txt"), os.listdir(_dataSets[testSet] + "test/"))))
 
 	return testFiles
 
