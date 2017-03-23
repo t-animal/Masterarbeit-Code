@@ -106,9 +106,8 @@ def getCVResult(classifierName, crossSet, classifierArgs):
 	for crossTestSet in generateCrossValidationSets(crossSet):
 		for crossValidateSet in crossTestSet["crossValidate"]:
 			classifier.train(crossValidateSet["train"])
-			result.addResult(classifier.test(crossTestSet["test"]))
+			result.addResult(classifier.test(crossValidateSet["validate"]))
 
-	log.info(result.oneline())
 	return result
 
 def _getCVResultMapProxy(args):
@@ -119,7 +118,7 @@ def getEfficiencyList(classifierName, crossValidateSet, classifierArgsList):
 	pool = multiprocessing.Pool(4)
 	resultList = pool.map(_getCVResultMapProxy, [(classifierName, crossValidateSet, arg) for arg in classifierArgsList])
 
-	return OrderedDict(sorted(resultList, key = lambda t: t[1]))
+	return OrderedDict([(str(k), v) for k, v in reversed(sorted(resultList, key=lambda t: t[1]))])
 
 
 def getKWTuples(p_grid):
@@ -195,7 +194,10 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 			for index, (worker, workerSock) in enumerate(workerSocks):
 				try:
 					size = int.from_bytes(workerSock.recv(4), byteorder="big")
-					result = pickle.loads(workerSock.recv(size))
+					pickled = workerSock.recv(1024)
+					while len(pickled) < size:
+						pickled += workerSock.recv(1024)
+					result = pickle.loads(pickled)
 				except KeyboardInterrupt:
 					raise KeyboardInterrupt()
 				except Exception as exception:
