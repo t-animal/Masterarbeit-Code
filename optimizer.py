@@ -68,6 +68,7 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 		except Exception as e:
 			result = {"result": None, "exception": e}
 
+		self.request.settimeout(None)
 		answer = pickle.dumps(result, protocol=3)
 		self.request.send(len(answer).to_bytes(4, byteorder="big"))
 		self.request.sendall(answer)
