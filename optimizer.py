@@ -24,6 +24,8 @@ class _signals():
 	OK = b'\x00'
 	ABORT = b'\x01'
 
+N_ROUNDS=500000
+
 class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 
 	def handle(self):
@@ -32,7 +34,7 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 		#basic authentication, no need for higher security atm
 		salt = "".join([random.choice(string.hexdigits) for x in range(0, 64)])
 		authcode = hashlib.pbkdf2_hmac("sha512", self.server.secret.encode("ascii"),
-		                               salt.encode("ascii"), 500000)
+		                               salt.encode("ascii"), N_ROUNDS)
 
 		self.request.sendall(salt.encode("ascii"))
 
@@ -146,7 +148,7 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 			return None
 
 		salt = sock.recv(64)
-		authcode = hashlib.pbkdf2_hmac("sha512", secret.encode("ascii"), salt, 500000)
+		authcode = hashlib.pbkdf2_hmac("sha512", secret.encode("ascii"), salt, N_ROUNDS)
 
 		sock.sendall(binascii.hexlify(authcode))
 
