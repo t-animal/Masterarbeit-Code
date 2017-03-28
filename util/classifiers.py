@@ -160,7 +160,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
 			plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
 		if plotFunc == "PCA3":
 			plotPCA(nonArousedVectors, arousedVectors, "non aroused", "aroused", 3)
-		if plotFunc == "PCA":
+		if plotFunc == "LDA":
 			plotLDA(nonArousedVectors, arousedVectors, "non aroused", "aroused")
 		if plotFunc == "LDA3":
 			plotLDA(nonArousedVectors, arousedVectors, "non aroused", "aroused", 3)
