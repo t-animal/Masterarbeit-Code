@@ -26,6 +26,10 @@ def plot2D(class1, class2, class1Label, class2Label, reductionFunction=PCA):
 
 	fig = plt.figure()
 
+	# print("#X Y Class")
+	# for idx, val in enumerate(X_r):
+	# 	print("{} {} {}".format(val[0], val[1], (class1Label if mask1[idx] else class2Label).replace(" ", "_")))
+
 	plt.scatter(X_r[mask1, 0], X_r[mask1, 1], c="r", label=class1Label, marker="o")
 	plt.scatter(X_r[mask2, 0], X_r[mask2, 1], c="g", label=class2Label, marker="^")
 
@@ -71,9 +75,14 @@ def plotVectorList(class1, class2=None):
 	cmap.set_over("r")
 	cmap.set_under("r")
 
-	plt.matshow(vectors, vmin=-3, vmax=3, norm=matplotlib.colors.SymLogNorm(0.001))
-	plt.colorbar()
+	fig, ax = plt.subplots(figsize=(15, 15))
+	img = ax.matshow(vectors, vmin=-3, vmax=3, norm=matplotlib.colors.SymLogNorm(0.001))
+	plt.colorbar(img)
 
+	plt.xlabel("Texts in Dataset")
+	plt.ylabel("Entries in vector")
+
+	# plt.savefig("../vortraege/antrittsvortrag/images/Veroff_pow2_glove_wns+.png", dpi=600)
 	plt.show()
 
 
