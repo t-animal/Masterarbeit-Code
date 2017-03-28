@@ -325,7 +325,7 @@ if __name__ == "__main__":
 	if args.json:
 		print(json_output)
 	else:
-		print("Best result after optimization of {} on {}")
+		print("Best result after optimization of {} on {}".format(args.classifier, args.datasets))
 		if os.isatty(sys.stdout.fileno()):
 			print("\033[1m" + bestItem[1].oneline() + "\033[0m")
 		else:
