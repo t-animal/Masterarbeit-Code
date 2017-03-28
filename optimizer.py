@@ -144,6 +144,7 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 	def getWorkerSock(worker):
 		try:
 			sock = socket.create_connection((worker, port))
+			set_keepalive_linux(sock) # not platform independant, could be deleted if your NAT is not as shitty as mine
 		except:
 			return None
 
