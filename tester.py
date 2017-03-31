@@ -137,8 +137,6 @@ if __name__ == "__main__":
 
 	parser.add_argument("--crossValidate", help = "The datasets to crossvalidate on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
-	parser.add_argument("--crossTest", help = "The datasets to crosstest on",
-	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 
 	parser.add_argument("--plot",  help = "Plot the vectors of a dataset",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
@@ -212,24 +210,12 @@ if __name__ == "__main__":
 
 
 	if args.crossValidate:
-		crossSet = generateCrossValidationSets(args.crossValidate)
-
-		result = CrossValidationResultContainer("aroused", "nonAroused")
-
-		for crossTestSet in crossSet:
-			for crossValidateSet in crossTestSet["crossValidate"]:
-				result.addResult(trainAndTest(classifier, crossValidateSet["train"], crossValidateSet["validate"]))
-
-		printResult(result, args.json, args.crossValidate, crossValidateSet["train"], args.crossValidate)
-
-
-	if args.crossTest:
 		crossSet = generateCrossValidationSets(args.crossTest)
 
 		result = CrossValidationResultContainer("aroused", "nonAroused")
 
 		for crossTestSet in crossSet:
-			for crossValidateSet in crossTestSet["crossValidate"]:
-				result.addResult(trainAndTest(classifier, crossValidateSet["train"], crossTestSet["test"]))
+			trainSet = crossTestSet["crossValidate"][0]["train"] + crossTestSet["crossValidate"][0]["validate"]
+			result.addResult(trainAndTest(classifier, trainSet, crossTestSet["test"]))
 
-		printResult(result, args.json, args.crossTest, crossValidateSet["train"], None, args.crossTest)
+		printResult(result, args.json, args.crossTest, trainSet, None, args.crossTest)
