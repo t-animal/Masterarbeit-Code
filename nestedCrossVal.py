@@ -233,7 +233,7 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 		log.info("Dispatched all work assignments")
 
 		while len(assignedTasks) > 0:
-			results = []
+			testResultList = []
 			for index, (worker, workerSock) in enumerate(workerSocks):
 				try:
 					size = int.from_bytes(workerSock.recv(4), byteorder="big")
@@ -253,8 +253,8 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 				if result["exception"] is not None:
 					log.warning("Worker %s threw an exception: %s. NOT REDISPATCHING!", worker, result["exception"])
 				else:
-					log.info("Worker %s has finished a computation (%d/%d done)", worker, len(results) + 1, len(kwargsList))
-					results.append(result["result"])
+					log.info("Worker %s has finished a computation (%d/%d done)", worker, len(testResultList) + 1, len(kwargsList))
+					testResultList.append(result["result"])
 
 	except KeyboardInterrupt:
 		log.error("Exiting, sending workers kill signal.")
