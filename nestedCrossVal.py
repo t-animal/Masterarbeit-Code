@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 from tester import getClassifierClass
+from util import set_keepalive_linux
 from util.containers import CrossValidationResultContainer
 from util.argGenerator import generateCrossValidationSets
 
@@ -24,10 +25,10 @@ class _signals():
 	OK = b'\x00'
 	ABORT = b'\x01'
 
-N_ROUNDS=500000
+#This should be around 500000
+N_ROUNDS=500
 
 class ExecutionRequestHandler(socketserver.BaseRequestHandler):
-
 	def handle(self):
 		poolEpoch = self.server.poolEpoch
 
@@ -50,7 +51,7 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 
 		log.info("Received computation request: {}({}) on {}".format(args[0], args[2], args[1]))
 
-		result = self.server.pool.apply_async(_getCVResultMapProxy, (args,))
+		result = self.server.pool.apply_async(_getInnerCVResultsMapProxy, (args,))
 
 		self.request.settimeout(5.0)
 		while True:
@@ -74,6 +75,7 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 		answer = pickle.dumps(result, protocol=3)
 		self.request.send(len(answer).to_bytes(4, byteorder="big"))
 		self.request.sendall(answer)
+
 
 
 class ExecutionRequestServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -100,28 +102,63 @@ class ExecutionRequestServer(socketserver.ThreadingMixIn, socketserver.TCPServer
 			self.poolEpoch += 1
 
 
-def getCVResult(classifierName, crossSet, classifierArgs):
 
-	result = CrossValidationResultContainer("aroused", "nonAroused")
+def getInnerCVResults(classifierName, crossSet, classifierArgs, includeOuterResults = False):
 
+	testResults = []
 	classifier = getClassifierClass(classifierName)(**classifierArgs)
 
 	for crossTestSet in generateCrossValidationSets(crossSet):
+		innerTestResult = CrossValidationResultContainer("aroused", "nonAroused")
+
 		for crossValidateSet in crossTestSet["crossValidate"]:
 			classifier.train(crossValidateSet["train"])
-			result.addResult(classifier.test(crossValidateSet["validate"]))
+			innerTestResult.addResult(classifier.test(crossValidateSet["validate"]))
 
-	return result
+		outerTrainSet = crossTestSet["crossValidate"][0]["train"] + crossTestSet["crossValidate"][0]["validate"]
+		classifier.train(outerTrainSet)
+		outerTestResult = classifier.test(crossTestSet["test"])
 
-def _getCVResultMapProxy(args):
-	return (args[2], getCVResult(*args))
+		if includeOuterResults:
+			testResults.append((outerTestResult, innerTestResult))
+		else:
+			testResult.append(innerTestResult)
+
+	log.info("Finished a computation.")
+	return testResults
+
+def _getInnerCVResultsMapProxy(args):
+	return (args[2], getInnerCVResults(*args, includeOuterResults = True))
 
 def getEfficiencyList(classifierName, crossValidateSet, classifierArgsList):
-
+	log.info("Beginning optimization.")
 	pool = multiprocessing.Pool(4)
-	resultList = pool.map(_getCVResultMapProxy, [(classifierName, crossValidateSet, arg) for arg in classifierArgsList])
+	testResultList = pool.map(_getInnerCVResultsMapProxy, [(classifierName, crossValidateSet, arg) for arg in classifierArgsList])
 
-	return OrderedDict([(str(k), v) for k, v in reversed(sorted(resultList, key=lambda t: t[1]))])
+	return getBestResultsFromParallelComputation(testResultList)
+
+def getBestResultsFromParallelComputation(testResultList):
+
+	bestResultPerInnerCV = []
+	resultOuterCVPerBestInnerCV = []
+	argsPerBestInnerCV = []
+	for args, cvResults in testResultList:
+		for index, (outerTestResult, innerTestResult) in enumerate(cvResults):
+			try:
+				if bestResultPerInnerCV[index] < innerTestResult:
+					bestResultPerInnerCV[index] = innerTestResult
+					resultOuterCVPerBestInnerCV[index] = outerTestResult
+					argsPerBestInnerCV[index] = args
+			except IndexError:
+				bestResultPerInnerCV.append(innerTestResult)
+				resultOuterCVPerBestInnerCV.append(outerTestResult)
+				argsPerBestInnerCV.append(args)
+
+	crossValResult = CrossValidationResultContainer("aroused", "nonAroused")
+	for result in resultOuterCVPerBestInnerCV:
+		crossValResult.addResult(result)
+
+	return crossValResult, zip(argsPerBestInnerCV, bestResultPerInnerCV)
 
 
 def getKWTuples(p_grid):
@@ -145,7 +182,7 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 		try:
 			sock = socket.create_connection((worker, port))
 			set_keepalive_linux(sock) # not platform independant, could be deleted if your NAT is not as shitty as mine
-		except:
+		except Exception as e:
 			return None
 
 		salt = sock.recv(64)
@@ -229,9 +266,9 @@ def startMaster(secret, port, workers, classifierName, crossValidateSet, optimiz
 		except BrokenPipeError:
 			pass
 
-		return {}
+		return None, None
 
-	return OrderedDict([(str(k), v) for k, v in reversed(sorted(results, key=lambda t: t[1]))])
+	return getBestResultsFromParallelComputation(testResultList)
 
 
 
@@ -286,37 +323,40 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 
-	if args.action == "worker":
+	if args.action == "worker" or args.action == "local":
 		logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level = logging.WARN)
 		#if loglevel is 1 print only worker logs, if greater print lower level logs, too
 		if args.v == 1:
 			log.setLevel(logging.INFO)
 		elif args.v > 1:
 			logging.basicConfig(level=[logging.WARN, logging.INFO, logging.DEBUG][min(args.v - 1, 2)])
+	else:
+		logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+		                level=[logging.WARN, logging.INFO, logging.DEBUG][min(args.v, 2)])
 
+	if args.action == "worker":
 		startWorker(args.secretFile.read(), args.port, args.num)
 		args.secretFile.close()
 		sys.exit(0)
 
-
-	logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-	                level=[logging.WARN, logging.INFO, logging.DEBUG][min(args.v, 2)])
-
 	if args.action == "master":
 		args.optimize["modelPath"] = [modelPaths[args.model]]
-		result = startMaster(args.secretFile.read(), args.port, args.workers, args.classifier, args.datasets, args.optimize)
+		bestItem, innerCVResults = startMaster(args.secretFile.read(), args.port, args.workers, args.classifier, args.datasets, args.optimize)
+		args.secretFile.close()
 
 	if args.action == "local":
 		args.optimize["modelPath"] = [modelPaths[args.model]]
-		result = getEfficiencyList(args.classifier, args.datasets, getKWTuples(args.optimize))
+		bestItem, innerCVResults = getEfficiencyList(args.classifier, args.datasets, getKWTuples(args.optimize))
 
-	if result == {}:
+	if bestItem == None:
 		print("Optimization failed")
 		sys.exit(1)
 
-	json_output = json.dumps(OrderedDict([(k,v.getDict()) for k,v in result.items()]), indent = 3)
-
-	bestItem = result.popitem(last = False)
+	resultDict = OrderedDict()
+	resultDict["nestedCVResult"] = bestItem.getDict()
+	#some cosmetics on the hyperparameters
+	resultDict["innerCVResults"] = [(str(sorted(k.items())).replace("', ", "': "), v.getDict()) for (k,v) in innerCVResults]
+	json_output = json.dumps(resultDict, indent = 3)
 
 	if args.outFile:
 		args.outFile.write(json_output)
@@ -327,9 +367,8 @@ if __name__ == "__main__":
 	else:
 		print("Best result after optimization of {} on {}".format(args.classifier, args.datasets))
 		if os.isatty(sys.stdout.fileno()):
-			print("\033[1m" + bestItem[1].oneline() + "\033[0m")
+			print("\033[1m" + bestItem.oneline() + "\033[0m")
 		else:
-			print(bestItem[1].oneline())
-		print(bestItem[1])
-		print("For these hyperparameters: {}".format(bestItem[0]))
+			print(bestItem.oneline())
+		print(bestItem)
 
