@@ -2,6 +2,7 @@ import json
 import logging
 import numpy
 import scipy
+import scipy.stats
 import textwrap
 
 from collections import OrderedDict
@@ -254,6 +255,10 @@ class CrossValidationResultContainer:
 		false_pos_class1_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label1 + "-percentage"], self.results)))
 		false_pos_class2_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label2 + "-percentage"], self.results)))
 
+		pValues = [x.getDict()["p-value"] for x in self.results]
+		fisher = -2 * sum(np.log(pValues))
+		combinedPValue = scipy.stats.chi2.sf(fisher, 2 * len(self.results))
+
 		return OrderedDict([
 			("tested", tested),
 			("tested-" + self.label1, tested_class1),
@@ -270,6 +275,7 @@ class CrossValidationResultContainer:
 			("false-positive-" + self.label1 + "-percentage-stddev", false_pos_class1_percentages.std()),
 			("false-positive-" + self.label2 + "-percentage-mean", false_pos_class2_percentages.mean()),
 			("false-positive-" + self.label2 + "-percentage-stddev", false_pos_class2_percentages.std()),
+			("p-value", combinedPValue),
 			("additional", [x.getDict() for x in self.results])
 		])
 
