@@ -20,9 +20,10 @@ class DocSumSVMClassifier(SVMClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath = None, power = 3, min_probability = 0, SVM_C = 2.5, gamma="auto"):
+	def __init__(self, modelPath = None, power = 3, multiplier = 100, min_probability = 0, SVM_C = 2.5, gamma="auto"):
 		super().__init__(modelPath)
 		self.power = int(power)
+		self.multiplier = float(multiplier)
 		self.min_probability = float(min_probability)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
@@ -40,6 +41,9 @@ class DocSumSVMClassifier(SVMClassifier):
 		for token, vector in vectorizedFile:
 			fileSum += vector
 
+		fileSum /= len(vectorizedFile)
+		fileSum *= self.multiplier
+
 		if self.power % 2 == 1:
 			fileSum **= self.power
 		else:
@@ -47,7 +51,9 @@ class DocSumSVMClassifier(SVMClassifier):
 			fileSum **= self.power
 			fileSum *= sign
 
-		fileSum /= len(vectorizedFile)
+		# fileSum /= np.linalg.norm(fileSum)
+		# fileSum /= len(vectorizedFile)
+		# fileSum = softmax(fileSum)
 
 		yield fileSum
 
