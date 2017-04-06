@@ -159,12 +159,15 @@ class TestresultContainer():
 			true_pos_class2_percentage =  float("nan")
 			false_pos_class2_percentage =  float("nan")
 
+		pvalue = scipy.stats.binom.cdf(self.incorrect, total, 0.5)
+
 		return OrderedDict([
 			("tested", total),
 			("tested-" + self.label1, total_class1),
 			("tested-" + self.label2, total_class2),
 			("correct", self.correct),
 			("correct-percentage", correct_percentage),
+			("p-value", pvalue),
 			("true-positive-" + self.label1, self.true_pos_class1),
 			("true-positive-" + self.label2, self.true_pos_class2),
 			("true-positive-" + self.label1 + "-percentage", true_pos_class1_percentage),
@@ -187,9 +190,8 @@ class TestresultContainer():
 	def oneline(self):
 		""" Returns a short oneliner describing the results"""
 		vals = self.getDict()
-		pValue = scipy.stats.binom.cdf(vals["incorrect"], vals["tested"], 0.5)
 		return "{} correct out of {} ({:6.2f}%, p={:6.3})".format(vals["correct"], vals["tested"],
-				                                                   vals["correct-percentage"], pValue)
+				                                                   vals["correct-percentage"], vals["p-value"])
 
 
 	def __str__(self):
@@ -267,7 +269,8 @@ class CrossValidationResultContainer:
 			("false-positive-" + self.label1 + "-percentage-mean", false_pos_class1_percentages.mean()),
 			("false-positive-" + self.label1 + "-percentage-stddev", false_pos_class1_percentages.std()),
 			("false-positive-" + self.label2 + "-percentage-mean", false_pos_class2_percentages.mean()),
-			("false-positive-" + self.label2 + "-percentage-stddev", false_pos_class2_percentages.std())
+			("false-positive-" + self.label2 + "-percentage-stddev", false_pos_class2_percentages.std()),
+			("additional", [x.getDict() for x in self.results])
 		])
 
 	def __str__(self):
