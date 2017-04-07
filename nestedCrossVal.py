@@ -441,7 +441,7 @@ if __name__ == "__main__":
 	masterParser.add_argument("--classifier", "-c", help = "Which classifier to use", required = True) \
 					   .completer = classifierCompleter
 	masterParser.add_argument("--model", "-m",  help = "Load the model path from 'tester.ini' and pass it to the classifier",
-								   choices = list(modelPaths.keys()), required = True)
+								   choices = list(modelPaths.keys()))
 	masterParser.add_argument("--datasets", "-d", help = "The datasets to crossvalidate on (must be available on all cluster workers)",
 								   nargs = "+", choices = ChoicesContainer(_dataSets.keys()), required = True)
 	masterParser.add_argument("-o", "--outFile", help = "Write json output to this file, too (will be truncated)", type = argparse.FileType("w"))
@@ -472,14 +472,15 @@ if __name__ == "__main__":
 		args.secretFile.close()
 		sys.exit(0)
 
-	if args.action == "master":
+	if args.model:
 		args.optimize["modelPath"] = [modelPaths[args.model]]
+
+	if args.action == "master":
 		master = ExecutionRequestMaster(args.secretFile.read(), args.port, args.workers)
 		bestItem, innerCVResults = master.getNestedCVResult(args.classifier, args.datasets, args.optimize)
 		args.secretFile.close()
 
 	if args.action == "local":
-		args.optimize["modelPath"] = [modelPaths[args.model]]
 		cv = ParallelNestedCV()
 		bestItem, innerCVResults = cv.getNestedCVResult(args.classifier, args.datasets, args.optimize)
 
