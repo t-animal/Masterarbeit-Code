@@ -7,11 +7,11 @@ import os
 import sys
 
 from collections import defaultdict
-from pylatex import Document, Section, Subsection, Tabular, MultiColumn,\
-    MultiRow
+from pylatex import *
 from pylatex.basic import *
 from pylatex.utils import *
 from pylatex.package import *
+from pylatex.position import *
 from pylatex.base_classes import *
 
 class Rotate(ContainerCommand):
@@ -56,7 +56,7 @@ def patchMissingPValue(allResults):
 	return allResults
 
 
-def getLatexDoc(results):
+def getLatexDoc(title, results):
 	def groupSortingKey(key):
 		if "." in key:
 			mod, retrofit = key.split(".")
@@ -87,11 +87,12 @@ def getLatexDoc(results):
 
 	geometry_options = {
 		"landscape": True,
-		"a4paper": True
+		"a4paper": True,
+		"margin": "0.5in"
 	}
 	doc = Document("testoutput", geometry_options=geometry_options)
 	doc.packages.append(Package("FiraSans", options=["sfdefault"]))
-	# doc.packages.append(Package("graphicx"))
+
 	table = Tabular("l|ccccccc")
 
 	table.add_row([" "] + [Rotate(60, x) for x in dataSets])
@@ -101,17 +102,27 @@ def getLatexDoc(results):
 		if "." in models[index] and not models[index-1].endswith(models[index][-3:]):
 			table.add_empty_row()
 		table.add_row([MultiRow(2, data = models[index])] + [NoEscape(str(x) + "\%") for x in percentages])
-		# secondLine = map([SmallText() for x in percentages])
 
 		table.add_row([""]+[SmallText(NoEscape("$\pm$ {}, p: {}\%".format(s, round(p*100,2) if p < 0.1 else ">10"))) for s, p in zip(stddevs, pValues)])
 
 
-	doc.append(LargeText(table))
-	doc.generate_pdf(clean_tex=False)
+	# resultsFigure = Figure()
+	# resultsFigure.append(LargeText(table))
+	# resultsFigure.add_caption(
+
+	doc.append(Section(title))
+	centeredTable = Center()
+	centeredTable.append(LargeText(table))
+	doc.append(centeredTable)
+	doc.append(NewLine())
+	doc.append(VerticalSpace("1em"))
+	doc.append("Results of  5-fold stratified nested cross validation on various datasets using different word vector implementations. "
+				"P-Values aggregated using Fisher's method")
+	doc.generate_pdf(clean_tex=True)
 
 
 if __name__ == "__main__":
 	allResults = patchMissingPValue(getAllResults(sys.argv[1]))
 	# print(allResults)
 
-	getLatexDoc(allResults)
+	getLatexDoc(os.path.split(os.path.abspath(sys.argv[1]))[-1], allResults)
