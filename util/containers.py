@@ -256,7 +256,7 @@ class CrossValidationResultContainer:
 		false_pos_class2_percentages = numpy.array(list(map(lambda x: x.getDict()["false-positive-" + self.label2 + "-percentage"], self.results)))
 
 		pValues = [x.getDict()["p-value"] for x in self.results]
-		fisher = -2 * sum(np.log(pValues))
+		fisher = -2 * sum(numpy.log(pValues))
 		combinedPValue = scipy.stats.chi2.sf(fisher, 2 * len(self.results))
 
 		return OrderedDict([
