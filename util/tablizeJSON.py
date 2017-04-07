@@ -23,6 +23,11 @@ class Rotate(ContainerCommand):
 		self.options = None
 		self.packages = [Package("graphicx")]
 
+def light(s, *, escape=True):
+    if escape:
+        s = escape_latex(s)
+
+    return NoEscape(r'\textmd{' + s + '}')
 
 def getAllResults(folder):
 	allResults = defaultdict(dict)
@@ -94,6 +99,7 @@ def getLatexDoc(title, results):
 	}
 	doc = Document("testoutput", geometry_options=geometry_options)
 	doc.packages.append(Package("FiraSans", options=["sfdefault"]))
+	# doc.packages.append(Package("xcolor", options=["dvipsnames"]))
 
 	table = Tabular("l|ccccccc")
 
@@ -103,9 +109,10 @@ def getLatexDoc(title, results):
 	for index, (percentages, stddevs, pValues) in enumerate(zip(percentages, stddevs, pValues)):
 		if "." in models[index] and not models[index-1].endswith(models[index][-3:]):
 			table.add_empty_row()
-		table.add_row([MultiRow(2, data = models[index])] + [NoEscape(str(x) + "\%") for x in percentages])
+		table.add_row([MultiRow(2, data = models[index])] + [TextColor("lightgray", t) if v > 0.05 else t for t,v in zip([NoEscape(str(x) + "\%") for x in percentages], pValues)])
 
-		table.add_row([""]+[SmallText(NoEscape("$\pm$ {}, p: {}\%".format(s, round(p*100,2) if p < 0.1 else ">10"))) for s, p in zip(stddevs, pValues)])
+		pText = [SmallText(NoEscape("$\pm$ {}, p: {}\%".format(s, round(p * 100,2) if p < 0.1 else ">10"))) for s, p in zip(stddevs, pValues)]
+		table.add_row([""]+[TextColor("lightgray", t) if v > 0.05 else t for t, v in zip(pText, pValues)])
 
 
 	# resultsFigure = Figure()
