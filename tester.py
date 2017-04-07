@@ -188,9 +188,6 @@ if __name__ == "__main__":
 	classifierClass = getClassifierClass(args.classifier)
 	classifier = classifierClass(*args.classifierArgs)
 
-	if len(args.classifierArgs) == 0:
-		print(classifierClass.__init__.__code__.co_varnames[1:])
-
 	if args.plot:
 		if "all" in args.plot:
 			args.plot = _dataSets.keys()
