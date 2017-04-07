@@ -18,7 +18,67 @@ from sklearn.utils.validation import check_X_y, check_is_fitted
 log = logging.getLogger("de.t_animal.MA.util.classifiers")
 
 class Classifier(BaseEstimator, ClassifierMixin):
-	""" A classifier base class: It vectorizes a file.
+	""" A classifier base class. It mainly just specifies the interface """
+
+	def fit(self, X, y):
+		"""Fit method as required by the scikit-learn estimator interface"""
+
+		# import pdb
+		# pdb.set_trace()
+		# X, y = check_X_y(X, y)
+		self.X_ = X
+		self.y_ = y
+
+		# Our classifiers determine the content and class of documents from filenames, so ignore y
+		self.train(X)
+
+		return self
+
+	def predict(self, X):
+		"""Predict method as required by the scikit-learn predictor interface"""
+
+		check_is_fitted(self, ['X_', 'y_'])
+
+		raise NotImplemented()
+
+	def train(self, trainFilenames):
+		"""Abstract method, do your magic here.
+		   It should train the classifier with the supplied filenames.
+
+		   :param trainFilenames: The filenames to train upon
+		   :type trainFilenames: iterable of strings
+		"""
+		raise NotImplemented()
+
+	def test(self, testFilenames):
+		"""Abstract method, do your magic here.
+		   It should test the classifier with the supplied filenames.
+
+		   :param testFilenames: The filenames to test
+		   :type testFilenames: iterable of strings
+		"""
+		raise NotImplemented()
+
+	def load(self, path):
+		"""Abstract method, do your magic here.
+		   It should load the internal state from a path
+		"""
+		raise NotImplemented()
+
+	def store(self, path):
+		"""Abstract method, do your magic here.
+		   It should store the internal state to a path
+		"""
+		raise NotImplemented()
+
+	def plot(self, filenames, plotFunc = None):
+		"""Abstract method, do your magic here.
+		   It should plot the given filenames in a suitable manner.
+		   Can be passed an additional parameter if more than one plotting function is avaialable"""
+		raise NotImplemented()
+
+class EmbeddingsClassifier(Classifier):
+	""" An embeddings classifier base class: It vectorizes a file.
 	"""
 
 	def __init__(self, modelPath = None):
@@ -40,46 +100,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
 		   A generator creating the vectors describing the given file
 		"""
 		raise NotImplemented()
-
-	def fit(self, X, y):
-		"""Fit method as required by the scikit-learn estimator interface"""
-
-		# import pdb
-		# pdb.set_trace()
-		# X, y = check_X_y(X, y)
-		self.X_ = X
-		self.y_ = y
-
-		self.train(X)
-
-		return self
-
-	def predict(self, X):
-		"""Predict method as required by the scikit-learn predictor interface"""
-
-		check_is_fitted(self, ['X_', 'y_'])
-
-		raise NotImplemented()
-
-	def train(self, trainFilenames):
-		"""Abstract method, do your magic here.
-		   It should train the classifier with the supplied filenames.
-
-		   :param trainFilenames: The filenames to train upon
-		   :type trainFilenames: iterable of strings
-		"""
-		raise NotImplemented()
-
-
-	def test(self, testFilenames):
-		"""Abstract method, do your magic here.
-		   It should test the classifier with the supplied filenames.
-
-		   :param testFilenames: The filenames to test
-		   :type testFilenames: iterable of strings
-		"""
-		raise NotImplemented()
-
 
 	def _vectorizeFile(self, filename):
 		""" Opens a file, splits it into words and gets the vectors for each word
@@ -121,19 +141,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
 		return translatedFile
 
-
-	def load(self, path):
-		"""Abstract method, do your magic here.
-		   It should load the internal state from a path
-		"""
-		raise NotImplemented()
-
-	def store(self, path):
-		"""Abstract method, do your magic here.
-		   It should store the internal state to a path
-		"""
-		raise NotImplemented()
-
 	def plot(self, filenames, plotFunc="PCA"):
 		"""Plots document vectors of the supplied files. Thi function can
 		   plot the PCA and LDA (each 2D and 3D), the histogram of the
@@ -170,7 +177,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
 			plotHistogram(arousedVectors, nonArousedVectors)
 
 
-class SVMClassifier(Classifier):
+class SVMClassifier(EmbeddingsClassifier):
 
 	def __init__(self, modelPath):
 		super().__init__(modelPath)
