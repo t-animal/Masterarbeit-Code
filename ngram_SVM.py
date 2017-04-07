@@ -7,12 +7,13 @@ import pdb
 from sklearn import svm as SVM
 from util import isAroused, softmax
 from util.containers import TestresultContainer
-from util.classifiers import SVMClassifier
+from util.classifiers import EmbeddingsClassifier, SVMClassifierMixin
 from util.plot import plotPCA
 
-class NGramSVM(SVMClassifier):
+class NGramSVM(EmbeddingsClassifier, SVMClassifierMixin):
 
 	def __init__(self, modelPath, windowSize, arousalLimit=0):
+		# this calls the EmbeddingsClassifier
 		super().__init__(modelPath)
 		self.windowSize = int(windowSize)
 		self.arousalLimit = float(arousalLimit)
@@ -45,7 +46,8 @@ class NGramSVM(SVMClassifier):
 			yield tmpSum
 
 	def train(self, trainFilenames):
-		super().train(trainFilenames)
+		# this calls the SVMClassifierMixin
+		super().train(trainFilenames, {"probability": False, "random_state": 42, "class_weight": {True: 1, False: 3}})
 		return
 
 		log.info("Finished training, determining suggested threshold")

@@ -13,14 +13,16 @@ from gensim.models import Word2Vec
 from util import softmax, isAroused
 from util.plot import plotPCA
 from util.containers import LazyModel, TestresultContainer
-from util.classifiers import SVMClassifier
+from util.classifiers import EmbeddingsClassifier, SVMClassifierMixin
 
-class DocSumSVMClassifier(SVMClassifier):
+class DocSumSVMClassifier(SVMClassifierMixin,EmbeddingsClassifier):
 	""" A very simple classifier: It vectorizes a file, averages up all word vectors
 	    and trains an SVM with the result
 	"""
 
 	def __init__(self, modelPath = None, power = 3, multiplier = 100, min_probability = 0, SVM_C = 2.5, gamma="auto"):
+		# import pdb
+		# pdb.set_trace()
 		super().__init__(modelPath)
 		self.power = int(power)
 		self.multiplier = float(multiplier)

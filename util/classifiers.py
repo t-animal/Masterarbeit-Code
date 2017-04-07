@@ -77,18 +77,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
 		   Can be passed an additional parameter if more than one plotting function is avaialable"""
 		raise NotImplemented()
 
-class EmbeddingsClassifier(Classifier):
-	""" An embeddings classifier base class: It vectorizes a file.
-	"""
-
-	def __init__(self, modelPath = None):
-		if modelPath is None:
-			raise ValueError("Model Path may not be None") #this breaks scikit-learn api
-
-		self.modelPath = modelPath
-		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=modelPath.endswith("bin"))
-
-
 	def _getDescribingVectors(self, filename):
 		"""Returns a list of vectors describing the given file, for when a
 		   generator is not useful"""
@@ -100,6 +88,19 @@ class EmbeddingsClassifier(Classifier):
 		   A generator creating the vectors describing the given file
 		"""
 		raise NotImplemented()
+
+
+class EmbeddingsClassifier(Classifier):
+	""" An embeddings classifier base class: It vectorizes a file.
+	"""
+
+	def __init__(self, modelPath = None):
+		if modelPath is None:
+			raise ValueError("Model Path may not be None") #this breaks scikit-learn api
+
+		self.modelPath = modelPath
+		self.model = LazyModel(KeyedVectors.load_word2vec_format, modelPath, binary=modelPath.endswith("bin"))
+
 
 	def _vectorizeFile(self, filename):
 		""" Opens a file, splits it into words and gets the vectors for each word
@@ -177,11 +178,10 @@ class EmbeddingsClassifier(Classifier):
 			plotHistogram(arousedVectors, nonArousedVectors)
 
 
-class SVMClassifier(EmbeddingsClassifier):
-
-	def __init__(self, modelPath):
-		super().__init__(modelPath)
-
+class SVMClassifierMixin:
+	""" A mixin providing a train-method for SVMs. It iterates over
+		files and their vectors and trains an SVM with them. Implement
+		testing on your own. """
 
 	def train(self, trainFilenames, svmParams={}):
 		"""Trains an SVM using the files supplied in trainFilenames.
