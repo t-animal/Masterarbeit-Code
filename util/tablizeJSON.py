@@ -67,7 +67,7 @@ def getLatexDoc(title, results):
 	dataSets = sorted(list(list(results.values())[0].keys()))
 	models = sorted(list(results.keys()), key=groupSortingKey)
 
-	bestLine = [0] * len(dataSets)
+	bestPercentage = [0] * len(dataSets)
 	percentages = []
 	stddevs = []
 	pValues = []
@@ -78,11 +78,13 @@ def getLatexDoc(title, results):
 
 	for lineno, line in enumerate(percentages):
 		for index, value in enumerate(line):
-			if value > percentages[bestLine[index]][index]:
-				bestLine[index] = lineno
+			if value > bestPercentage[index]:
+				bestPercentage[index] = value
 
-	for index, lineno in enumerate(bestLine):
-		percentages[lineno][index] = bold(percentages[lineno][index])
+	for lineno, line in enumerate(percentages):
+		for index, value in enumerate(line):
+			if abs(bestPercentage[index] - value) <= 0.05:
+				percentages[lineno][index] = bold(percentages[lineno][index])
 
 
 	geometry_options = {
@@ -114,9 +116,9 @@ def getLatexDoc(title, results):
 	centeredTable = Center()
 	centeredTable.append(LargeText(table))
 	doc.append(centeredTable)
-	doc.append(NewLine())
+	# doc.append(NewLine())
 	doc.append(VerticalSpace("1em"))
-	doc.append("Results of  5-fold stratified nested cross validation on various datasets using different word vector implementations. "
+	doc.append("Results of  5-fold stratified nested cross validation on various datasets using the given classifier. "
 				"P-Values aggregated using Fisher's method")
 	doc.generate_pdf(clean_tex=True)
 
