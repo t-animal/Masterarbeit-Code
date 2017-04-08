@@ -8,6 +8,7 @@ import pickle
 import re
 
 from sklearn import svm as SVM
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.utils.validation import check_is_fitted
 from gensim.models import Word2Vec
 from util import softmax, isAroused
@@ -36,10 +37,15 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		   :returns: numpy array
 		"""
 		vectorizedFile = self._vectorizeFile(filename)
+		tfidfFactors = self.tfidf.transform([" ".join([x[0] for x in vectorizedFile])]).getrow(0).toarray()[0]
 
 		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
 		for token, vector in vectorizedFile:
 			fileSum += vector
+			# try:
+			# 	fileSum += vector * tfidfFactors[self.tfidf.vocabulary_[token]]
+			# except KeyError:
+			# 	pass #ignore tokens not in tfidf
 
 		fileSum /= len(vectorizedFile)
 		fileSum *= self.multiplier
@@ -51,13 +57,13 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 			fileSum **= self.power
 			fileSum *= sign
 
-		# fileSum /= np.linalg.norm(fileSum)
-		# fileSum /= len(vectorizedFile)
-		# fileSum = softmax(fileSum)
-
 		yield fileSum
 
 	def train(self, trainFilenames):
+		# self.tfidf = TfidfVectorizer(input="filename")
+		# self.tfidf.fit(trainFilenames)
+		# self.tfidf.set_params(input="content")
+
 		super().train(trainFilenames, {"probability": self.min_probability > 0,
 		                               "C": self.SVM_C,
 		                               "gamma": self.gamma,
