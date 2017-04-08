@@ -69,33 +69,33 @@ def generateCrossValidationSets(dataSets):
 		random.shuffle(allAroused)
 		random.shuffle(allNonAroused)
 
-		for crossTestingI in range(0, 5):
-			if len(embeddedCrossvalidationSets) <= crossTestingI:
-				embeddedCrossvalidationSets += [{"test": [], "crossValidate": []}]
+		for outerIndex in range(0, 5):
+			if len(embeddedCrossvalidationSets) <= outerIndex:
+				embeddedCrossvalidationSets += [{"outerValidate": [], "crossValidate": []}]
 
-			crossTestingSet = embeddedCrossvalidationSets[crossTestingI]
+			outerSet = embeddedCrossvalidationSets[outerIndex]
 
-			testingAroused = allAroused[crossTestingI::5]
-			testingNonAroused = allNonAroused[crossTestingI::5]
+			outerAroused = allAroused[outerIndex::5]
+			outerNonAroused = allNonAroused[outerIndex::5]
 
-			testingAroused = testingAroused[:len(testingNonAroused)]
-			testingNonAroused = testingNonAroused[:len(testingAroused)]
+			outerAroused = outerAroused[:len(outerNonAroused)]
+			outerNonAroused = outerNonAroused[:len(outerAroused)]
 
-			testingSet = testingAroused + testingNonAroused
-			restAroused = list(filter(lambda x: x not in testingSet, allAroused))
-			restNonAroused = list(filter(lambda x: x not in testingSet, allNonAroused))
+			outerValidateSet = outerAroused + outerNonAroused
+			restAroused = list(filter(lambda x: x not in outerValidateSet, allAroused))
+			restNonAroused = list(filter(lambda x: x not in outerValidateSet, allNonAroused))
 
-			assert(len(list(filter(isAroused, testingSet))) == len(testingSet) / 2)
-			crossTestingSet["test"] += testingSet
+			assert(len(list(filter(isAroused, outerValidateSet))) == len(outerValidateSet) / 2)
+			outerSet["outerValidate"] += outerValidateSet
 
-			for crossValidateI in range(0, 5):
-				if len(crossTestingSet["crossValidate"]) <= crossValidateI:
-					crossTestingSet["crossValidate"] += [{"validate": [], "train": []}]
+			for innerIndex in range(0, 5):
+				if len(outerSet["crossValidate"]) <= innerIndex:
+					outerSet["crossValidate"] += [{"validate": [], "train": []}]
 
-				crossValidationSet = crossTestingSet["crossValidate"][crossValidateI]
+				crossValidationSet = outerSet["crossValidate"][innerIndex]
 
-				validatingAroused = restAroused[crossValidateI::5]
-				validatingNonAroused = restNonAroused[crossValidateI::5]
+				validatingAroused = restAroused[innerIndex::5]
+				validatingNonAroused = restNonAroused[innerIndex::5]
 
 				validatingAroused = validatingAroused[:len(validatingNonAroused)]
 				validatingNonAroused = validatingNonAroused[:len(validatingAroused)]
@@ -107,7 +107,7 @@ def generateCrossValidationSets(dataSets):
 				assert(len(list(filter(isAroused, validatingSet))) == len(validatingSet) / 2)
 				#assert no validate files or testing files are train files
 				assert(set(trainingSet) - set(validatingSet) == set(trainingSet))
-				assert(set(trainingSet) - set(testingSet) == set(trainingSet))
+				assert(set(trainingSet) - set(outerValidateSet) == set(trainingSet))
 
 				crossValidationSet["validate"] += validatingSet
 				crossValidationSet["train"] += trainingSet

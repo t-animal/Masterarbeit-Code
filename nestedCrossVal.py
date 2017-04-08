@@ -77,7 +77,7 @@ class NestedCV:
 
 			outerTrainSet = crossTestSet["crossValidate"][0]["train"] + crossTestSet["crossValidate"][0]["validate"]
 			classifier.train(outerTrainSet)
-			outerTestResult = classifier.test(crossTestSet["test"])
+			outerTestResult = classifier.test(crossTestSet["outerValidate"])
 
 			if includeOuterResults:
 				testResults.append((outerTestResult, innerTestResult))

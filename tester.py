@@ -213,6 +213,6 @@ if __name__ == "__main__":
 
 		for crossTestSet in crossSet:
 			trainSet = crossTestSet["crossValidate"][0]["train"] + crossTestSet["crossValidate"][0]["validate"]
-			result.addResult(trainAndTest(classifier, trainSet, crossTestSet["test"]))
+			result.addResult(trainAndTest(classifier, trainSet, crossTestSet["outerValidate"]))
 
 		printResult(result, args.json, args.crossTest, trainSet, None, args.crossTest)
