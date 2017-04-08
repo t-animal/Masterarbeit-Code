@@ -42,6 +42,7 @@ if [[ -r venv/bin/activate ]]; then
 	install_package scikit-learn
 	install_package matplotlib
 	install_package argcomplete
+	install_package pylatex
 
 	echo "=============================================================================="
 	echo "To use completion for tester.py, execute this after activating the virtualenv:"
