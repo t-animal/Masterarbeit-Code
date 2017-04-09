@@ -191,7 +191,7 @@ class TestresultContainer():
 	def oneline(self):
 		""" Returns a short oneliner describing the results"""
 		vals = self.getDict()
-		return "{} correct out of {} ({:6.2f}%, p={:6.3})".format(vals["correct"], vals["tested"],
+		return "{} correct out of {} ({:6.2f}%, p={:6.3f})".format(vals["correct"], vals["tested"],
 				                                                   vals["correct-percentage"], vals["p-value"])
 
 
@@ -242,7 +242,7 @@ class CrossValidationResultContainer:
 	def oneline(self):
 		percentages = numpy.array(list(map(lambda x: x.getDict()["correct-percentage"], self.results)))
 
-		return "Mean correct percentage: {}. Standard deviation: {}".format(percentages.mean(), percentages.std())
+		return "Mean correct percentage: {:.3f}. Standard deviation: {:.3f}, p={:.3f})".format(percentages.mean(), percentages.std(), self.getDict()["p-value"])
 
 	def getDict(self):
 		tested = sum(map(lambda x: x.getDict()["tested"], self.results))
