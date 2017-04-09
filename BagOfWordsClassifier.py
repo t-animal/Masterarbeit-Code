@@ -12,9 +12,9 @@ class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
 	"""A bag of words classifiers"""
 
 	def __init__(self, SVM_C = 2.5, gamma="auto", ngram_range=[1,1]):
-		self.SVM_C = SVM_C
-		self.gamma = gamma
-		self.ngram_range = [1,1]
+		self.SVM_C = float(SVM_C)
+		self.gamma = gamma if gamma == "auto" else float(gamma)
+		self.ngram_range = list(map(int, ngram_range[1:-1].split(","))) if type(ngram_range) == "str" else ngram_range
 
 	def _generateDescribingVectors(self, filename):
 		a= self.vectorizer.transform([filename]).getrow(0).toarray()[0]
