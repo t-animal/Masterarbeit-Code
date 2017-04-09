@@ -37,7 +37,7 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		   :returns: numpy array
 		"""
 		vectorizedFile = self._vectorizeFile(filename)
-		tfidfFactors = self.tfidf.transform([" ".join([x[0] for x in vectorizedFile])]).getrow(0).toarray()[0]
+		# tfidfFactors = self.tfidf.transform([" ".join([x[0] for x in vectorizedFile])]).getrow(0).toarray()[0]
 
 		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
 		for token, vector in vectorizedFile:
