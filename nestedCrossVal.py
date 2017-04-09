@@ -60,7 +60,7 @@ class NestedCV:
 		    """
 
 		testResults = []
-		classifier = getClassifierClass(classifierName)(**classifierArgs)
+		classifier = getClassifierClass(classifierName, "classifiers")(**classifierArgs, )
 
 		for crossTestSet in generateCrossValidationSets(dataSets):
 			innerTestResult = CrossValidationResultContainer("aroused", "nonAroused")

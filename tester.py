@@ -42,14 +42,15 @@ class ChoicesContainer:
 		return self.vals.__iter__()
 
 def classifierCompleter(prefix, **kwargs):
-	return filter(lambda x: x.startswith(prefix), getAllClassifiers())
+	return filter(lambda x: x.startswith(prefix), getAllClassifiers("classifiers"))
 
 
 def getClassifierClass(className, package="."):
+	packagePath = package
 	if not package == ".":
 		package += "."
 
-	for module in filter(lambda x: x.endswith(".py"), os.listdir(package)):
+	for module in filter(lambda x: x.endswith(".py"), os.listdir(packagePath)):
 		importedModule = __import__(package + module[:-3], fromlist=[className])
 		try:
 			return getattr(importedModule, className)
@@ -197,7 +198,7 @@ if __name__ == "__main__":
 
 
 	#actual computation begins here
-	classifierClass = getClassifierClass(args.classifier)
+	classifierClass = getClassifierClass(args.classifier, "classifiers")
 	classifier = classifierClass(**args.classifierArgs)
 
 	if args.plot:

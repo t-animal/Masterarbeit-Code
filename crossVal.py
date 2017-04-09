@@ -43,7 +43,7 @@ class CrossValidation:
 
 	@staticmethod
 	def performCV(classifierName, dataSets, classifierArgs):
-		classifierClass = getClassifierClass(classifierName)
+		classifierClass = getClassifierClass(classifierName, "classifiers")
 		classifier = classifierClass(**classifierArgs)
 
 		result = CrossValidationResultContainer("aroused", "nonAroused")
