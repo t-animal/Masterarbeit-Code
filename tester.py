@@ -124,6 +124,18 @@ if __name__ == "__main__":
 	else:
 		modelPaths = {}
 
+	class ArgSplit(argparse.Action):
+		def __init__(self, option_strings, dest, **kwargs):
+			self.dest = dest
+			super(ArgSplit, self).__init__(option_strings, dest, **kwargs)
+
+		def __call__(self, parser, namespace, values, option_string=None):
+
+			if any(["=" not in v for v in values]):
+				raise ValueError("Args must be key value pairs, joined by a = (key=value)")
+
+			setattr(namespace, self.dest, dict([val.split("=", 1) for val in values]))
+
 	parser = argparse.ArgumentParser(description='Train, validate and test classifiers')
 	parser.add_argument("--json",  help = "Display the output as json",              action = "store_true")
 	parser.add_argument("-v",      help = "Be more verbose (-vv for max verbosity)", action = "count", default = 0)
@@ -150,8 +162,8 @@ if __name__ == "__main__":
 	                   .completer = classifierCompleter
 	parser.add_argument("--modelPath", "-m",  help = "Load the model path from 'tester.ini' and pass it to the classifier",
 	                               choices = list(modelPaths.keys()))
-	parser.add_argument("classifierArgs",     help = "additional arguments to pass to the classifier (empty to list)",
-	                               nargs = "*")
+	parser.add_argument("--args",  help = "additional arguments to pass to the classifier as key=value pairs",
+	                               nargs = "*", dest="classifierArgs", action=ArgSplit)
 
 	argcomplete.autocomplete(parser)
 	args = parser.parse_args()
@@ -161,7 +173,7 @@ if __name__ == "__main__":
 		args.validate = args.train
 
 	if args.modelPath:
-		args.classifierArgs = [modelPaths[args.modelPath]] + args.classifierArgs
+		args.classifierArgs["modelPath"] = modelPaths[args.modelPath]
 
 	args.train = checkForAll(args.train)
 	args.validate = checkForAll(args.validate)
@@ -186,7 +198,7 @@ if __name__ == "__main__":
 
 	#actual computation begins here
 	classifierClass = getClassifierClass(args.classifier)
-	classifier = classifierClass(*args.classifierArgs)
+	classifier = classifierClass(**args.classifierArgs)
 
 	if args.plot:
 		if "all" in args.plot:
