@@ -42,7 +42,10 @@ class ChoicesContainer:
 		return self.vals.__iter__()
 
 def classifierCompleter(prefix, **kwargs):
-	return filter(lambda x: x.startswith(prefix), getAllClassifiers("classifiers"))
+	try:
+		return list(filter(lambda x: x.startswith(prefix), getAllClassifiers("classifiers")))
+	except Exception as e:
+		return [str(e)]
 
 
 def getClassifierClass(className, package="."):
@@ -61,10 +64,11 @@ def getClassifierClass(className, package="."):
 
 def getAllClassifiers(package="."):
 	for module in filter(lambda x: x.endswith(".py"), os.listdir(package)):
-		for line in open(module, "r"):
+		for line in open(os.path.join(package, module), "r"):
 			#this is only a rough estimate but good enough for now
-			if line.startswith("class") and ("(SVMClassifier)" in line or "(Classifier)" in line):
+			if line.startswith("class") and ("SVMClassifier" in line or "Classifier" in line):
 				yield line[6:line.index("(")]
+				break #assuming one classifier per file
 
 
 def trainAndTest(classifier, train, test, load=None, store=None):
