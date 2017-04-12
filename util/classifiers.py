@@ -191,7 +191,7 @@ class SVMClassifierMixin:
 		   :param svmParams: values to pass to the svm as keyword arguments
 		   :type svmParams: dict
 		"""
-		log.info("Training SVM from scratch, collecting document sums first")
+		log.info("Training SVM from scratch, collecting document vectors first")
 		nonArousedVectors = []
 		arousedVectors = []
 
