@@ -170,7 +170,7 @@ class ExecutionRequestMaster:
 		:type worker: string"""
 		try:
 			sock = socket.create_connection((worker, self.workersPort), 5)
-			set_keepalive_linux(sock) # not platform independant, could be deleted if your NAT is not as shitty as mine
+			set_keepalive_linux(sock, max_fails = 20) # not platform independant, could be deleted if your NAT is not as shitty as mine
 		except Exception as e:
 			log.debug(e)
 			return None
