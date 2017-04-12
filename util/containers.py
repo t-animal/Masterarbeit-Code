@@ -6,6 +6,7 @@ import scipy.stats
 import textwrap
 
 from collections import OrderedDict
+from gensim.models import KeyedVectors
 
 
 class LazyModel():
@@ -54,6 +55,43 @@ class LazyModel():
 		self._instantiate()
 		return self[key]
 
+
+
+class CachedKeyedVectors:
+	""" A simple class emulating parts of gensim's KeyedVectors so that we can use their wmdistance method
+	    and our caching system at the same time. Not threadsafe!
+	"""
+
+	def __init__(self, model):
+		"""
+		:param model: the KeyedVectors model to emulate (can be a LazyModel!)
+		"""
+		self.model = model
+		self.vocabulary = {}
+
+	def __getitem__(self, key):
+		try:
+			return self.vocabulary[key]
+		except KeyError:
+			return self.model[key]
+
+	def __contains__(self, key):
+		return key in self.vocabulary or key in self.model
+
+	def wmdistance(self, document1, document2):
+		"""Passes the call on to gensim's KeyedVectors.wmdistance but leveraging our cache system
+
+		:param document1: the first of the documents to get the distance of
+		:type document1: a list of tuples (word token, vector)
+		:param document2: the second of the documents to get the distance of
+		:type document2: a list of tuples (word token, vector)
+		"""
+
+		self.vocabulary = {k:v for words in document1 + document2 for k,v in words + list(self.vocabulary.items())}
+
+		document1Words = [word for words in document1 for word, vector in words]
+		document2Words = [word for words in document2 for word, vector in words]
+		return KeyedVectors.wmdistance(self, document1Words, document2Words)
 
 
 

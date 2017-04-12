@@ -43,6 +43,7 @@ if [[ -r venv/bin/activate ]]; then
 	install_package matplotlib
 	install_package argcomplete
 	install_package pylatex
+	install_package pyemd
 
 	echo "=============================================================================="
 	echo "To use completion for tester.py, execute this after activating the virtualenv:"
