@@ -168,7 +168,7 @@ if __name__ == "__main__":
 	parser.add_argument("--modelPath", "-m",  help = "Load the model path from 'tester.ini' and pass it to the classifier",
 	                               choices = list(modelPaths.keys()))
 	parser.add_argument("--args",  help = "additional arguments to pass to the classifier as key=value pairs",
-	                               nargs = "*", dest="classifierArgs", action=ArgSplit)
+	                               nargs = "*", dest="classifierArgs", action=ArgSplit, default={})
 
 	argcomplete.autocomplete(parser)
 	args = parser.parse_args()
