@@ -37,30 +37,3 @@ class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
 		                               "gamma": self.gamma,
 		                               "random_state": 42,
 		                               "class_weight": "balanced"})
-
-	def test(self, testFilenames):
-		"""Test the SVM using the files supplied in testFilenames.
-
-		   :param testFilenames: The filenames to test upon
-		   :type testFilenames: iterable of strings
-		   :returns: a TestresultContainer object
-		   :raises RuntimeError: if no svm was trained or loaded
-		"""
-		if self.svm is None:
-			raise RuntimeError("Call train or load before calling test!")
-
-		log.info("Beginning testing")
-		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
-
-		for filename in testFilenames:
-			bow = self._getDescribingVectors(filename)[0]
-
-			result = self.svm.predict([bow])[0]
-			testResult.addResult(bool(result), isAroused(filename))
-
-			log.info("Checked file %s, result %s (%s)", filename, result,
-			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT")
-
-		log.info("Finished testing: %s", testResult.oneline())
-
-		return testResult

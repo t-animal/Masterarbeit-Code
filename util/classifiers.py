@@ -212,6 +212,33 @@ class SVMClassifierMixin:
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
 
+	def test(self, testFilenames):
+		"""Test the SVM using the files supplied in testFilenames. It's very simple
+		   and assumes a file can be described using a single feature vector.
+
+		   :param testFilenames: The filenames to test upon
+		   :type testFilenames: iterable of strings
+		   :returns: a TestresultContainer object
+		   :raises RuntimeError: if no svm was trained or loaded
+		"""
+		if self.svm is None:
+			raise RuntimeError("Call train or load before calling test!")
+
+		log.info("Beginning testing")
+		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
+
+		for filename in testFilenames:
+			feature = self._getDescribingVectors(filename)[0]
+
+			result = self.svm.predict([feature])[0]
+			testResult.addResult(bool(result), isAroused(filename))
+
+			log.info("Checked file %s, result %s (%s)", filename, result,
+			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT")
+
+		log.info("Finished testing: %s", testResult.oneline())
+
+		return testResult
 
 	def load(self, svmPath):
 		"""Load the internal state from a path
