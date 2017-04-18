@@ -1,3 +1,4 @@
+import itertools
 import logging
 import numpy as np
 import matplotlib
@@ -101,3 +102,29 @@ def plotLDA(class1, class2, class1Label, class2Label, nDims=2):
 		plot3D(class1, class2, class1Label, class2Label, LinearDiscriminantAnalysis)
 	else:
 		log.error("nDims must be either 2 or 3, is %s", nDims)
+
+
+
+def plotPairDistances(class1, class2):
+	"""Takes the distance of all vector 2-tuples per class, drops vectors of duplicates and
+	   plots the histogram."""
+	tuples1 = itertools.filterfalse(lambda x: np.array_equal(*x), itertools.product(class1, class1))
+	tuples2 = itertools.filterfalse(lambda x: np.array_equal(*x), itertools.product(class2, class2))
+
+	print(class1[0][0])
+
+	distances1 = list(map(lambda x: np.linalg.norm(x[0] - x[1]), tuples1))
+	distances2 = list(map(lambda x: np.linalg.norm(x[0] - x[1]), tuples2))
+
+	maxDistance = max(max(distances1), max(distances2))
+
+	distances1 = [x/maxDistance for x in distances1]
+	distances2 = [x/maxDistance for x in distances2]
+
+	bins = [n/500 for n in range(0, 500)]
+
+	fig, ax = plt.subplots()
+	ax.hist(distances1, bins = bins, edgecolor="r", histtype = 'step')
+	ax.hist(distances2, bins = bins, edgecolor="g", histtype = 'step')
+	plt.show()
+

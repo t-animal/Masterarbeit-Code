@@ -9,7 +9,7 @@ import re
 from sklearn import svm as SVM
 from gensim.models import KeyedVectors
 from util import softmax, isAroused
-from util.plot import plotPCA, plotLDA, plotHistogram, plotVectorList
+from util.plot import plotPCA, plotLDA, plotHistogram, plotVectorList, plotPairDistances
 from util.containers import LazyModel, TestresultContainer
 
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -151,7 +151,7 @@ class EmbeddingsClassifier(Classifier):
 		   :type filenames: iterable of strings
 
 		   :param plotFunc: the plotting function name to use
-		   :type filenames: one of ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"]
+		   :type filenames: one of ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT", "DIST"]
 		"""
 		nonArousedVectors = []
 		arousedVectors = []
@@ -176,6 +176,8 @@ class EmbeddingsClassifier(Classifier):
 			plotVectorList(arousedVectors, nonArousedVectors)
 		if plotFunc == "HIST":
 			plotHistogram(arousedVectors, nonArousedVectors)
+		if plotFunc == "DIST":
+			plotPairDistances(arousedVectors, nonArousedVectors)
 
 
 class SVMClassifierMixin:

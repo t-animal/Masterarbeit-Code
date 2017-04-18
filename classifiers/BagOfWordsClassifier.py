@@ -37,3 +37,6 @@ class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
 		                               "gamma": self.gamma,
 		                               "random_state": 42,
 		                               "class_weight": "balanced"})
+
+	def plot(self, *args, **kwargs):
+		raise NotImplementedError("Not applicable")
