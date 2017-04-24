@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import os
 import socket
@@ -48,3 +49,15 @@ def set_keepalive_linux(sock, after_idle_sec=5, interval_sec=15, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
+
+class ArgSplit(argparse.Action):
+	def __init__(self, option_strings, dest, **kwargs):
+		self.dest = dest
+		super(ArgSplit, self).__init__(option_strings, dest, **kwargs)
+
+	def __call__(self, parser, namespace, values, option_string=None):
+
+		if any(["=" not in v for v in values]):
+			raise ValueError("Args must be key value pairs, joined by a = (key=value)")
+
+		setattr(namespace, self.dest, dict([val.split("=", 1) for val in values]))

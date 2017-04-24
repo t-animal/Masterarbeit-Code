@@ -121,6 +121,7 @@ def printResult(result, json, train, trainFiles, validate, test=None):
 
 if __name__ == "__main__":
 	import argcomplete, argparse, configparser, sys
+	from util import ArgSplit
 
 	configParser = configparser.ConfigParser()
 	configParser.read(os.path.split(__file__)[0] + os.sep + "tester.ini")
@@ -128,18 +129,6 @@ if __name__ == "__main__":
 		modelPaths = dict(configParser["ModelPaths"])
 	else:
 		modelPaths = {}
-
-	class ArgSplit(argparse.Action):
-		def __init__(self, option_strings, dest, **kwargs):
-			self.dest = dest
-			super(ArgSplit, self).__init__(option_strings, dest, **kwargs)
-
-		def __call__(self, parser, namespace, values, option_string=None):
-
-			if any(["=" not in v for v in values]):
-				raise ValueError("Args must be key value pairs, joined by a = (key=value)")
-
-			setattr(namespace, self.dest, dict([val.split("=", 1) for val in values]))
 
 	parser = argparse.ArgumentParser(description='Train, validate and test classifiers')
 	parser.add_argument("--json",  help = "Display the output as json",              action = "store_true")
@@ -158,7 +147,7 @@ if __name__ == "__main__":
 	parser.add_argument("--plot",  help = "Plot the vectors of a dataset",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 	parser.add_argument("--plotFunction", help = "Which plotting function to use",
-	                               nargs = "+", choices = ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT"], default = "PCA")
+	                               nargs = "+", choices = ["PCA", "PCA3", "LDA", "LDA3" "HIST", "MAT", "DIST"], default = "PCA")
 
 	parser.add_argument("--store", help = "Store the trained classifier to this path")
 	parser.add_argument("--load",  help = "Load a pre-trained classifier from this path")
