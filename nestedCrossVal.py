@@ -41,7 +41,7 @@ class NestedCV:
 
 
 	@staticmethod
-	def performCV(classifierName, dataSets, classifierArgs, includeOuterResults = False):
+	def performCV(classifierName, dataSets, classifierArgs, includeOuterResults = False, reshuffle = False):
 		""" Performs a nested cross validation and returns a list of the results of the inner cross validations.
 		    If includeOuterResults is True, the list contains tuples of the result of the outer validation and
 		    the inner cross validation.
@@ -50,10 +50,12 @@ class NestedCV:
 		    :param dataSets: the name of the data sets to crossvalidate on
 		    :param classifierArgs: the kw-parameters to pass to the classifier
 		    :param includeOuterResults: whether to include the outer results or not
+		    :param reshuffle: if set to True, the data sets will be shuffled differently twice and the CV performed on it
 		    :type classifierName: string
 		    :type dataSets: list of strings
 		    :type classifierArgs: dict
 		    :type includeOuterResults: boolean
+		    :type reshuffle: boolean
 
 		    :returns: list of CrossValidateResultContainer or
 		              list of tuple (TestResultContainer, CrossValidateResultContiner)
@@ -62,7 +64,11 @@ class NestedCV:
 		testResults = []
 		classifier = getClassifierClass(classifierName, "classifiers")(**classifierArgs, )
 
-		for crossTestSet in generateCrossValidationSets(dataSets):
+		generatedSets = generateCrossValidationSets(dataSets, 42)
+		if reshuffle:
+			generatedSets += generateCrossValidationSets(dataSets, 23)
+
+		for crossTestSet in generatedSets:
 			innerTestResult = CrossValidationResultContainer("aroused", "nonAroused")
 
 			for crossValidateSet in crossTestSet["crossValidate"]:
@@ -153,7 +159,7 @@ class ParallelNestedCV(NestedCV):
 
 			:returns: tuple (dict, tuple (TestresultContainer, CrossValidationResultContainer))
 		"""
-		return (args[2], NestedCV.performCV(*args, includeOuterResults = True))
+		return (args[2], NestedCV.performCV(*args, includeOuterResults = True, reshuffle = True))
 
 
 

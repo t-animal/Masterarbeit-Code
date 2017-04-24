@@ -39,7 +39,7 @@ def getAllFiles(dataSets):
 
 	return files
 
-def generateCrossValidationSets(dataSets):
+def generateCrossValidationSets(dataSets, shuffleSeed=42):
 	"""Generates cross validation sets. I.e. all files from the given data sets (files in the
 	directory of the data set and in the test directory within that) are partitioned into 5 sets
 	of 20% test data, and 80% training data. These 80% training data are once more partitioned into
@@ -65,7 +65,7 @@ def generateCrossValidationSets(dataSets):
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
-		random.seed(42)
+		random.seed(shuffleSeed)
 		random.shuffle(allAroused)
 		random.shuffle(allNonAroused)
 

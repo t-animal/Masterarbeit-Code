@@ -42,13 +42,17 @@ class CrossValidation:
 
 
 	@staticmethod
-	def performCV(classifierName, dataSets, classifierArgs):
+	def performCV(classifierName, dataSets, classifierArgs, reshuffle = False):
 		classifierClass = getClassifierClass(classifierName, "classifiers")
 		classifier = classifierClass(**classifierArgs)
 
+		generatedSets = generateCrossValidationSets(dataSets, 42)
+		if reshuffle:
+			generatedSets += generateCrossValidationSets(dataSets, 23)
+
 		result = CrossValidationResultContainer("aroused", "nonAroused")
 
-		for crossValidateSet in generateCrossValidationSets(dataSets):
+		for crossValidateSet in generatedSets:
 			trainSet = crossValidateSet["crossValidate"][0]["train"] + crossValidateSet["crossValidate"][0]["validate"]
 			classifier.train(trainSet)
 			result.addResult(classifier.test(crossValidateSet["outerValidate"]))
@@ -93,7 +97,7 @@ class ParallelCV(CrossValidation):
 
 			:returns: tuple (dict, tuple (TestresultContainer, CrossValidationResultContainer))
 		"""
-		return (args[2], ParallelCV.performCV(*args))
+		return (args[2], ParallelCV.performCV(*args, reshuffle = True))
 
 
 
