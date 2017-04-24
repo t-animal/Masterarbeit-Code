@@ -47,15 +47,13 @@ def getAllResults(folder):
 	return allResults
 
 def patchMissingPValue(allResults):
-	""" Fixes old json outputs, where nested CV p-values were not yet aggregated. """
-	if "p-value" in list(list(allResults.values())[0].values())[0]["nestedCVResult"]:
-		return allResults
-
+	""" Fixes old json outputs, where nested CV p-values were calculated using fisher's method"""
 	for results in allResults.values(): #models
 		for result in results.values(): #datasets
-			pValues = [x["p-value"] for x in result["nestedCVResult"]["additional"]]
-			fisher = -2 * sum(np.log(pValues))
-			combinedPValue = scipy.stats.chi2.sf(fisher, 2 * len(result["nestedCVResult"]["additional"]))
+			if "p-value" in result["nestedCVResult"]:
+				continue
+			correctPercentages = [x["correct-percentage"] for x in result["nestedCVResult"]["additional"]]
+			combinedPValue = scipy.stats.ttest_1samp(correctPercentages, 50).pvalue
 			result["nestedCVResult"]["p-value"] = combinedPValue
 
 	return allResults
@@ -91,6 +89,8 @@ def getLatexDoc(title, results):
 			if abs(bestPercentage[index] - value) <= 0.05:
 				percentages[lineno][index] = bold(percentages[lineno][index])
 
+	bestPercentage = np.array(bestPercentage)
+
 
 	geometry_options = {
 		"landscape": True,
@@ -111,7 +111,8 @@ def getLatexDoc(title, results):
 			table.add_empty_row()
 		table.add_row([MultiRow(2, data = models[index])] + [TextColor("lightgray", t) if v > 0.05 else t for t,v in zip([NoEscape(str(x) + "\%") for x in percentages], pValues)])
 
-		pText = [SmallText(NoEscape("$\pm$ {}, p: {}\%".format(s, round(p * 100,2) if p < 0.1 else ">10"))) for s, p in zip(stddevs, pValues)]
+		pText = [("<1\\textperthousand" if p < 0.01 else str(round(p * 100,2))+"\%") if p < 0.1 else ">10\%" for p in pValues]
+		pText = [SmallText(NoEscape("$\pm$ {}, p: {}".format(s, p))) for s, p in zip(stddevs, pText)]
 		table.add_row([""]+[TextColor("lightgray", t) if v > 0.05 else t for t, v in zip(pText, pValues)])
 
 
@@ -123,10 +124,11 @@ def getLatexDoc(title, results):
 	centeredTable = Center()
 	centeredTable.append(LargeText(table))
 	doc.append(centeredTable)
-	# doc.append(NewLine())
 	doc.append(VerticalSpace("1em"))
-	doc.append("Results of  5-fold stratified nested cross validation on various datasets using the given classifier. "
-				"P-Values aggregated using Fisher's method")
+	doc.append("Results of 5-fold stratified nested cross validation on various datasets using the given classifier.")
+	doc.append(NewLine())
+	doc.append("Average of best-performing hyperparameters: ")
+	doc.append(bold("{:6.3f}% ± {:6.3f}".format(bestPercentage.mean(), bestPercentage.std())))
 	doc.generate_pdf(clean_tex=True)
 
 

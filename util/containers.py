@@ -230,7 +230,7 @@ class TestresultContainer():
 		""" Returns a short oneliner describing the results"""
 		vals = self.getDict()
 		return "{} correct out of {} ({:6.2f}%, p={:6.3f})".format(vals["correct"], vals["tested"],
-				                                                   vals["correct-percentage"], vals["p-value"])
+																   vals["correct-percentage"], vals["p-value"])
 
 
 	def __str__(self):
@@ -247,17 +247,17 @@ class TestresultContainer():
 				True positive {}: {} {:2} ({:6.2f}%)
 				False positive {}:{} {:2} ({:6.2f}%)
 				False positive {}:{} {:2} ({:6.2f}%)""".format(padNoLabel, vals["tested"], self.label1, vals["tested-" + self.label1],
-				                                 self.label2, vals["tested-" + self.label2], #endTested
-				                                 padNoLabel, vals["correct"], vals["correct-percentage"], #endCorrect
-				                                 padNoLabel, vals["incorrect"], 100 - vals["correct-percentage"], #endIncorrect
-				                                 self.label1, padLabel1, vals["true-positive-" + self.label1],
-				                                 vals["true-positive-" + self.label1 + "-percentage"], #endTP1
-				                                 self.label2, padLabel2, vals["true-positive-" + self.label2],
-				                                 vals["true-positive-" + self.label2 + "-percentage"],  #endTP2
-				                                 self.label1, padLabel1, vals["false-positive-" + self.label1],
-				                                 vals["false-positive-" + self.label1 + "-percentage"], #endFP1
-				                                 self.label2, padLabel2, vals["false-positive-" + self.label2],
-				                                 vals["false-positive-" + self.label2 + "-percentage"])
+												 self.label2, vals["tested-" + self.label2], #endTested
+												 padNoLabel, vals["correct"], vals["correct-percentage"], #endCorrect
+												 padNoLabel, vals["incorrect"], 100 - vals["correct-percentage"], #endIncorrect
+												 self.label1, padLabel1, vals["true-positive-" + self.label1],
+												 vals["true-positive-" + self.label1 + "-percentage"], #endTP1
+												 self.label2, padLabel2, vals["true-positive-" + self.label2],
+												 vals["true-positive-" + self.label2 + "-percentage"],  #endTP2
+												 self.label1, padLabel1, vals["false-positive-" + self.label1],
+												 vals["false-positive-" + self.label1 + "-percentage"], #endFP1
+												 self.label2, padLabel2, vals["false-positive-" + self.label2],
+												 vals["false-positive-" + self.label2 + "-percentage"])
 
 		return textwrap.dedent(ret)
 
@@ -295,7 +295,8 @@ class CrossValidationResultContainer:
 
 		pValues = [x.getDict()["p-value"] for x in self.results]
 		fisher = -2 * sum(numpy.log(pValues))
-		combinedPValue = scipy.stats.chi2.sf(fisher, 2 * len(self.results))
+		pValue = scipy.stats.ttest_1samp(correct_percentages, 50).pvalue
+		combinedPValueFisher = scipy.stats.chi2.sf(fisher, 2 * len(self.results))
 
 		return OrderedDict([
 			("tested", tested),
@@ -313,7 +314,8 @@ class CrossValidationResultContainer:
 			("false-positive-" + self.label1 + "-percentage-stddev", false_pos_class1_percentages.std()),
 			("false-positive-" + self.label2 + "-percentage-mean", false_pos_class2_percentages.mean()),
 			("false-positive-" + self.label2 + "-percentage-stddev", false_pos_class2_percentages.std()),
-			("p-value", combinedPValue),
+			("p-value", pValue),
+			("p-value-fisher", combinedPValueFisher),
 			("additional", [x.getDict() for x in self.results])
 		])
 
@@ -331,17 +333,17 @@ class CrossValidationResultContainer:
 				True positive {}: {} {:6.2f}% ± {:6.2f}
 				False positive {}:{} {:6.2f}% ± {:6.2f}
 				False positive {}:{} {:6.2f}% ± {:6.2f}""".format(padNoLabel, vals["tested"], self.label1, vals["tested-" + self.label1],
-				                                 self.label2, vals["tested-" + self.label2], #endTested
-				                                 padNoLabel, vals["correct-percentage-mean"], vals["correct-percentage-stddev"], #endCorrect
-				                                 padNoLabel, vals["incorrect-percentage-mean"], vals["incorrect-percentage-stddev"], #endIncorrect
-				                                 self.label1, padLabel1, vals["true-positive-" + self.label1 + "-percentage-mean"],
-				                                 vals["true-positive-" + self.label1 + "-percentage-stddev"], #endTP1
-				                                 self.label2, padLabel2, vals["true-positive-" + self.label2 + "-percentage-mean"],
-				                                 vals["true-positive-" + self.label2 + "-percentage-stddev"],  #endTP2
-				                                 self.label1, padLabel1, vals["false-positive-" + self.label1 + "-percentage-mean"],
-				                                 vals["false-positive-" + self.label1 + "-percentage-stddev"], #endFP1
-				                                 self.label2, padLabel2, vals["false-positive-" + self.label2 + "-percentage-mean"],
-				                                 vals["false-positive-" + self.label2 + "-percentage-stddev"])
+												 self.label2, vals["tested-" + self.label2], #endTested
+												 padNoLabel, vals["correct-percentage-mean"], vals["correct-percentage-stddev"], #endCorrect
+												 padNoLabel, vals["incorrect-percentage-mean"], vals["incorrect-percentage-stddev"], #endIncorrect
+												 self.label1, padLabel1, vals["true-positive-" + self.label1 + "-percentage-mean"],
+												 vals["true-positive-" + self.label1 + "-percentage-stddev"], #endTP1
+												 self.label2, padLabel2, vals["true-positive-" + self.label2 + "-percentage-mean"],
+												 vals["true-positive-" + self.label2 + "-percentage-stddev"],  #endTP2
+												 self.label1, padLabel1, vals["false-positive-" + self.label1 + "-percentage-mean"],
+												 vals["false-positive-" + self.label1 + "-percentage-stddev"], #endFP1
+												 self.label2, padLabel2, vals["false-positive-" + self.label2 + "-percentage-mean"],
+												 vals["false-positive-" + self.label2 + "-percentage-stddev"])
 
 		return textwrap.dedent(ret)
 
