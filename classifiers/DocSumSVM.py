@@ -67,7 +67,6 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		super().train(trainFilenames, {"probability": self.min_probability > 0,
 		                               "C": self.SVM_C,
 		                               "gamma": self.gamma,
-		                               "random_state": 42,
 		                               "class_weight": "balanced"})
 
 

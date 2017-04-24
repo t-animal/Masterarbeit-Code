@@ -186,7 +186,10 @@ class SVMClassifierMixin:
 		testing on your own. """
 
 	def train(self, trainFilenames, svmParams={}):
-		"""Trains an SVM using the files supplied in trainFilenames.
+		"""Trains an SVM using the files supplied in trainFilenames. The dict svmParams is passed
+		   as keyword parameters to the svm. By default the svm parameter, class_weights will be
+		   set to "balanced" if it has not been set explicitly. The svm paramater random_state
+		   will be overwritten and set to a fixed value.
 
 		   :param trainFilenames: The filenames to train upon
 		   :type trainFilenames: iterable of strings
@@ -210,6 +213,11 @@ class SVMClassifierMixin:
 				log.debug("Vector: %s", str(vector))
 
 		log.info("Start training svm with document vectors")
+
+		if "class_weight" not in svmParams:
+			svmParams["class_weight"] = "balanced"
+
+		svmParams["random_state"] = 42
 		self.svm = SVM.SVC(**svmParams) # TODO: Plot results for weights
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
