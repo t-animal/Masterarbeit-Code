@@ -21,24 +21,10 @@ from theano.tensor.shared_randomstreams import RandomStreams
 
 
 # NO_DATA = 3000000
-# BATCH_SIZE = 100
-# EPOCHS = 3
-# LEARNING_RATE = 1.0
-# MOMENTUM = 0.0
-# REGULARIZATION = 0.001
-# COST_FACTOR = 160.0
 
-# BATCHES = NO_DATA / BATCH_SIZE
 
 NO_DATA = 6
-BATCH_SIZE = 6
-EPOCHS = 3
-LEARNING_RATE = 1.0
-MOMENTUM = 0.0
-REGULARIZATION = 0.001
-COST_FACTOR = 160.0
 
-BATCHES = int(NO_DATA / BATCH_SIZE)
 
 """
 WeightLearningNetwork trains a small neural network in which we assign a weight to each vector in the sentence, normalize and cutt off.
@@ -50,12 +36,18 @@ def cutoff(x):
     #return 0.92258 * numpy.exp(-0.27144 * x) + 0.09834
 
 class WeightLearningNetwork():
-    def __init__(self, wordvectors, maxNoWords = 30):
+    def __init__(self, wordvectors, maxNoWords = 30, batch_size = 100):
+        """
+           :param wordvectors: the word vector model to use
+           :param maxNoWords: the maximum number of words a document may have
+           :type wordvectors: gensim.model.KeyedVectors
+           :type maxNoWords: int
+        """
 
         self.wordvectors = wordvectors
-        # self.embeddings_dim = wordvectors[wordvectors.index2word[0]].size
-        self.embeddings_dim = 300
+        self.embeddings_dim = wordvectors[wordvectors.index2word[0]].size
         self.maxNoWords = maxNoWords
+        self.batch_size = batch_size
 
         input_shape = (self.embeddings_dim, self.maxNoWords)
         output_shape = (self.embeddings_dim, 1)
@@ -73,17 +65,41 @@ class WeightLearningNetwork():
         self.z = T.vector('z') #-1 or 1
 
         self.model1 = layers.interpolatingDotMeanLayer(self.numpy_rng, self.theano_rng, self.x1, input_shape,
-                                                             self.indices1, self.l1, max_length=35, n_out=output_shape[1], batch_size=BATCH_SIZE, W=None)
+                                                             self.indices1, self.l1, max_length=35, n_out=output_shape[1], batch_size=batch_size, W=None)
         self.model2 = layers.interpolatingDotMeanLayer(self.numpy_rng, self.theano_rng, self.x2, input_shape,
-                                                             self.indices2, self.l2, max_length=35, n_out=output_shape[1], batch_size=BATCH_SIZE, W=self.model1.W)
+                                                             self.indices2, self.l2, max_length=35, n_out=output_shape[1], batch_size=batch_size, W=self.model1.W)
 
         self.params = []
         self.params.extend(self.model1.params)
 
-    def run(self, pairs, noPairs, docFreq, epochs=EPOCHS, learning_rate=LEARNING_RATE, regularization=REGULARIZATION, momentum=MOMENTUM):
+    def run(self, pairs, noPairs, docFreq, epochs = 3, learning_rate = 1.0, regularization = 0.001, momentum = 0.0, cost_factor = 160.0):
+        """
+            :param pairs: list of documents which are related; each item must be two related documents seperated by semicolon
+            :param noPairs: list of documents which are unrelated; each item must be two unrelated documents seperated by semicolon
+            :param docFreq: document frequency of words in the given model
+            :param epochs:  ???
+            :param learning_rate: ???
+            :param regularization: ???
+            :param momentum: ???
+            :param cost_factor: ???
+
+            :type pairs: list of strings
+            :type noPairs: list of strings
+            :type docFreq: list of ints (use functions in documentFrequency for further reference)
+            :type epochs: int
+            :type learning_rate: float
+            :type regularization: float
+            :type momentum: float
+            :type cost_factor: float
+
+            :returns: numpy.array
+        """
+
+        #FIXME: Is this correct? it's a guess from the processors.py's code
+        NO_DATA = min(len(pairs), len(noPairs))*2
 
         processor = processors.LengthTweetPairProcessor(pairs, noPairs, docFreq, self.wordvectors,
-                                                            self.maxNoWords, self.embeddings_dim, BATCH_SIZE, cutoff)
+                                                            self.maxNoWords, self.embeddings_dim, self.batch_size, cutoff)
         train_x1 = theano.shared(value=processor.x1, name='train_x1', borrow=False)
         train_x2 = theano.shared(value=processor.x2, name='train_x2', borrow=False)
         train_i1 = theano.shared(value=processor.indices1, name='train_i1', borrow=False)
@@ -96,7 +112,7 @@ class WeightLearningNetwork():
         print('Initializing train function...')
         train = self.train_function_momentum(train_x1, train_x2, train_i1, train_i2, train_l1, train_l2, train_y, train_z)
 
-        print('Cost factor: ' + str(COST_FACTOR))
+        print('Cost factor: ' + str(cost_factor))
 
         t = Thread(target=processor.process)
         t.daemon = True
@@ -107,11 +123,11 @@ class WeightLearningNetwork():
             os._exit(0)
         signal.signal(signal.SIGINT, signal_handler)
 
+        batches = int(NO_DATA / self.batch_size) #FIXME this cuts off (as does the original implementation), is this correct?
         best_cost = float('inf')
         best_weights = None
         previous_best_cost = float('inf')
         second_time = False
-        global LEARNING_RATE
 
         for e in range(epochs):
             processor.new_epoch()
@@ -136,7 +152,7 @@ class WeightLearningNetwork():
             processor.lock.notifyAll()
             processor.lock.release()
 
-            for b in range(BATCHES):
+            for b in range(batches):
                 cost = train(lr=learning_rate, reg=regularization, mom=momentum)
 
                 processor.lock.acquire()
@@ -144,7 +160,7 @@ class WeightLearningNetwork():
                     processor.lock.wait()
                 processor.lock.release()
 
-                print('Training, batch %d (from %d), cost %.5f' % (b, BATCHES, cost))
+                print('Training, batch %d (from %d), cost %.5f' % (b, batches, cost))
                 we = self.model1.W.get_value()
                 print(repr(we))
 
@@ -158,16 +174,16 @@ class WeightLearningNetwork():
                 train_z.set_value(processor.z, borrow=False)
 
                 processor.lock.acquire()
-                if b < BATCHES-2:
+                if b < batches-2:
                     processor.cont = True
                     processor.ready = False
-                if b == BATCHES-1 and e == epochs-1:
+                if b == batches-1 and e == epochs-1:
                     processor.stop = True
                     processor.cont = True
                 processor.lock.notifyAll()
                 processor.lock.release()
 
-            #print('Training, factor %d, lr %.5f, epoch %d, cost %.5f' % (int(COST_FACTOR), LEARNING_RATE, e, numpy.mean(c)))
+            #print('Training, factor %d, lr %.5f, epoch %d, cost %.5f' % (int(cost_factor), learning_rate, e, numpy.mean(c)))
             #we = self.model1.W.get_value()
             #print(repr(we))
 
@@ -185,7 +201,7 @@ class WeightLearningNetwork():
                 break
             else:
                 best_cost = previous_best_cost
-                LEARNING_RATE = 0.001
+                learning_rate = 0.001
                 second_time = True
 
         t.join()
@@ -261,13 +277,13 @@ class WeightLearningNetwork():
         ### Median loss with cross-entropy
         # distances = ((output1 - output2) ** 2).sum(axis=1)
         # sorted_distances = T.sort(distances)
-        # median = (sorted_distances[BATCH_SIZE/2] + sorted_distances[BATCH_SIZE/2 - 1]) / 2.0
+        # median = (sorted_distances[self.batch_size/2] + sorted_distances[self.batch_size/2 - 1]) / 2.0
         #
-        # p = distances[0:BATCH_SIZE:2]  #pairs
-        # q = distances[1:BATCH_SIZE:2]  #non-pairs
+        # p = distances[0:self.batch_size:2]  #pairs
+        # q = distances[1:self.batch_size:2]  #non-pairs
         #
-        # loss = (T.log(1.0 + T.exp(-COST_FACTOR*(q - median)))).mean() + \
-        #     (T.log(1.0 + T.exp(-COST_FACTOR*(median - p)))).mean()          #cross-entropy
+        # loss = (T.log(1.0 + T.exp(-cost_factor*(q - median)))).mean() + \
+        #     (T.log(1.0 + T.exp(-cost_factor*(median - p)))).mean()          #cross-entropy
         # return loss
 
     def calculate_regularization(self):

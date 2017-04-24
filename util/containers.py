@@ -7,6 +7,7 @@ import textwrap
 
 from collections import OrderedDict
 from gensim.models import KeyedVectors
+from gensim.models.keyedvectors import Vocab
 
 
 class LazyModel():
@@ -56,10 +57,62 @@ class LazyModel():
 		return self[key]
 
 
+class SubsetKeyedVectors(KeyedVectors):
+	"""Builts a KeyedVectors object from a list (word, vector) tuples. This goes one step further
+	   than CachedKeyedVectors, which only emulate KeyedVectors. While the latter falls back
+	   to a wrapped KeyedVectors model on cache miss this class only supports the vectors which
+	   were put into it.
+
+	   This is mainly needed for supporting our cache in de Boom's RepresentationLearning
+	   algorithm which relies on internals of the KeyedVector class"""
+
+	log = logging.getLogger("de.t_animal.MA.util.SubsetKeyedVectors")
+
+	def addToVocab(self, vocabList):
+		"""Adds the vocabular in vocabList to the KeyedVectors. Very similar to KeyedVectors.load_word2vec_format.
+
+		:param vocabList: the word, vector tuples to add
+		:type vocabList: a list of tuples (word, vector) i.e. (str, numpy.array)
+		"""
+
+		vocab_size = len(vocabList)
+		vector_size = vocabList[0][1].shape[0]
+		datatype = vocabList[0][1].dtype
+
+		if (self.vector_size is not None and not self.vector_size == vector_size) or \
+		   (not self.syn0 == [] and self.syn0.dtype == datatype ):
+			SubsetKeyedVectors.log.warn("Not adding incompatible vectors")
+			return
+
+		additionalSyn0 = numpy.zeros((vocab_size, vector_size), dtype=datatype)
+
+		self.vector_size = vector_size
+		if self.syn0 == []:
+			self.syn0 = additionalSyn0
+		else:
+			self.syn0 = numpy.concatenate(self.syn0, additionalSyn0)
+
+		# this class does not support count, replicate behaviour of superclass in that case
+		for vocab in self.vocab.items():
+			vocab.count += vocab_size
+
+		old_vocab_size = len(self.vocab)
+
+		for word, weights in vocabList:
+			word_id = len(self.vocab)
+			if word in self.vocab:
+				SubsetKeyedVectors.log.warn("duplicate word '%s', ignoring all but first", word)
+				continue
+
+			# count not supported. just make up some bogus counts, in descending order
+			self.vocab[word] = Vocab(index=word_id, count=old_vocab_size + vocab_size - word_id)
+			self.syn0[word_id] = weights
+			self.index2word.append(word)
+
 
 class CachedKeyedVectors:
 	""" A simple class emulating parts of gensim's KeyedVectors so that we can use their wmdistance method
-	    and our caching system at the same time. Not threadsafe!
+		and our caching system at the same time. Not threadsafe!
 	"""
 
 	def __init__(self, model):
@@ -97,7 +150,7 @@ class CachedKeyedVectors:
 
 class TestresultContainer():
 	""" A container for test results so that they can be stored and printed
-	    in a consistent manner """
+		in a consistent manner """
 
 	log = logging.getLogger("de.t_animal.MA.util.TestresultContainer")
 
@@ -121,6 +174,9 @@ class TestresultContainer():
 		self.label2 = class2Label if class2Label is not None else "class2"
 
 		self.additionalData = {}
+
+	def __getitem__(self, key):
+		return self.getDict()[key]
 
 
 	def addResult(self, resultingClass, expectedClass):
@@ -273,6 +329,9 @@ class CrossValidationResultContainer:
 
 		self.label1 = class1Label if class1Label is not None else "class1"
 		self.label2 = class2Label if class2Label is not None else "class2"
+
+	def __getitem__(self, key):
+		return self.getDict()[key]
 
 	def addResult(self, result):
 		self.results.append(result)
