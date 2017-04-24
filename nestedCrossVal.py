@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Optimize for hyperparameters (on a cluster). Requires a file secretFile to be readable.')
 	parser.add_argument("--json",  help = "Display the output as json",              action = "store_true")
-	parser.add_argument("-v",      help = "Be more verbose (-vv for max verbosity)", action = "count", default = 0)
+	parser.add_argument("-v",      help = "Be more verbose (repeat v for more verbosity)", action = "count", default = 0)
 
 	parser.add_argument("--secretFile",  "-s", help = "A file containing a shared secret for all workers and the master (e.g. `dd if=/dev/urandom bs=1 count=100 | base64 > secretFile`)",
 							type = argparse.FileType('r', encoding='UTF-8'), default = "secretFile")
