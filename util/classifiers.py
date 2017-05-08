@@ -13,6 +13,7 @@ from util.plot import plotPCA, plotLDA, plotHistogram, plotVectorList, plotPairD
 from util.containers import LazyModel, TestresultContainer
 
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn import ensemble
 from sklearn.utils.validation import check_X_y, check_is_fitted
 
 log = logging.getLogger("de.t_animal.MA.util.classifiers")
@@ -267,3 +268,92 @@ class SVMClassifierMixin:
 		log.info("Storing SVM to file")
 		with open(svmPath, "wb") as persistanceFile:
 			pickle.dump(self.svm, persistanceFile)
+
+
+class RandomForestClassifierMixin:
+	""" A mixin providing a train-method for Random Forests. It iterates over
+		files and their vectors and trains a random forest classifier with them. Implement
+		testing on your own if you need fancy stuff. """
+
+	def trainForests(self, trainFilenames, forestParams={}):
+		"""Trains random forests using the files supplied in trainFilenames. The dict forestParams is passed
+		   as keyword parameters to the classifier. By default the classifier parameter, class_weights will be
+		   set to "balanced" if it has not been set explicitly. The classifier paramater random_state
+		   will be overwritten and set to a fixed value.
+
+		   :param trainFilenames: The filenames to train upon
+		   :type trainFilenames: iterable of strings
+		   :param forestParams: values to pass to the classifier as keyword arguments
+		   :type forestParams: dict
+		"""
+		log.info("Training forests from scratch, collecting document vectors first")
+		nonArousedVectors = []
+		arousedVectors = []
+
+		for filename in trainFilenames:
+			log.info("Beginning with file %s", filename)
+			vectors = self._generateDescribingVectors(filename)
+
+			for vector in vectors:
+				if isAroused(filename):
+					arousedVectors.append(vector)
+				else:
+					nonArousedVectors.append(vector)
+
+				log.debug("Vector: %s", str(vector))
+
+		log.info("Start training forests with document vectors")
+
+		if "class_weight" not in forestParams:
+			forestParams["class_weight"] = "balanced"
+
+		forestParams["random_state"] = 42
+		self.forests = ensemble.RandomForestClassifier(**forestParams) # TODO: Plot results for weights
+		self.forests.fit(nonArousedVectors + arousedVectors,
+		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
+
+	def testForests(self, testFilenames):
+		"""Test the forests using the files supplied in testFilenames. It's very simple
+		   and assumes a file can be described using a single feature vector.
+
+		   :param testFilenames: The filenames to test upon
+		   :type testFilenames: iterable of strings
+		   :returns: a TestresultContainer object
+		   :raises RuntimeError: if no svm was trained or loaded
+		"""
+		if self.forests is None:
+			raise RuntimeError("Call train or load before calling test!")
+
+		log.info("Beginning testing")
+		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
+
+		for filename in testFilenames:
+			feature = self._getDescribingVectors(filename)[0]
+
+			result = self.forests.predict([feature])[0]
+			testResult.addResult(bool(result), isAroused(filename))
+
+			log.info("Checked file %s, result %s (%s)", filename, result,
+			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT")
+
+		log.info("Finished testing: %s", testResult.oneline())
+
+		return testResult
+
+	def loadForests(self, forestsPath):
+		"""Load the internal state from a path
+		"""
+		log.info("Loading forests from pickled file")
+		with open(forestsPath, "rb") as persistanceFile:
+			self.forests = pickle.load(persistanceFile, encoding='latin1')
+
+
+	def storeForests(self, forestsPath):
+		"""Store the internal state to a path
+		"""
+		if self.forests is None:
+			raise RuntimeError("Call train or load before calling save!")
+
+		log.info("Storing forests to file")
+		with open(forestsPath, "wb") as persistanceFile:
+			pickle.dump(self.forests, persistanceFile)
