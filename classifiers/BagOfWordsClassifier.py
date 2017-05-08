@@ -32,11 +32,12 @@ class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
 		self.vectorizer = TfidfVectorizer(input="filename", ngram_range=self.ngram_range)
 		self.vectorizer.fit(trainFilenames)
 
-		#this calls SVMClassifierMixin
-		super().train(trainFilenames, {"C": self.SVM_C,
+		trainSVM(trainFilenames, {"C": self.SVM_C,
 		                               "gamma": self.gamma,
 		                               "random_state": 42,
 		                               "class_weight": "balanced"})
+
+	test = SVMClassifierMixin.testSVM
 
 	def plot(self, *args, **kwargs):
 		raise NotImplementedError("Not applicable")

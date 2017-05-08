@@ -64,7 +64,7 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		# self.tfidf.fit(trainFilenames)
 		# self.tfidf.set_params(input="content")
 
-		super().train(trainFilenames, {"probability": self.min_probability > 0,
+		trainSVM(trainFilenames, {"probability": self.min_probability > 0,
 		                               "C": self.SVM_C,
 		                               "gamma": self.gamma,
 		                               "class_weight": "balanced"})

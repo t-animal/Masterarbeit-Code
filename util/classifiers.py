@@ -185,7 +185,7 @@ class SVMClassifierMixin:
 		files and their vectors and trains an SVM with them. Implement
 		testing on your own. """
 
-	def train(self, trainFilenames, svmParams={}):
+	def trainSVM(self, trainFilenames, svmParams={}):
 		"""Trains an SVM using the files supplied in trainFilenames. The dict svmParams is passed
 		   as keyword parameters to the svm. By default the svm parameter, class_weights will be
 		   set to "balanced" if it has not been set explicitly. The svm paramater random_state
@@ -222,7 +222,7 @@ class SVMClassifierMixin:
 		self.svm.fit(nonArousedVectors + arousedVectors,
 		             [0] * len(nonArousedVectors) + [1] * len(arousedVectors))
 
-	def test(self, testFilenames):
+	def testSVM(self, testFilenames):
 		"""Test the SVM using the files supplied in testFilenames. It's very simple
 		   and assumes a file can be described using a single feature vector.
 
@@ -250,7 +250,7 @@ class SVMClassifierMixin:
 
 		return testResult
 
-	def load(self, svmPath):
+	def loadSVM(self, svmPath):
 		"""Load the internal state from a path
 		"""
 		log.info("Loading SVM from pickled file")
@@ -258,7 +258,7 @@ class SVMClassifierMixin:
 			self.svm = pickle.load(persistanceFile, encoding='latin1')
 
 
-	def store(self, svmPath):
+	def storeSVM(self, svmPath):
 		"""Store the internal state to a path
 		"""
 		if self.svm is None:

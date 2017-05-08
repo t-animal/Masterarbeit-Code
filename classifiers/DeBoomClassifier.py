@@ -94,7 +94,9 @@ class DeBoomClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 	def train(self, trainFilenames):
 		self.learnRepresentationWeights(trainFilenames)
-		super().train(trainFilenames)
+		trainSVM(trainFilenames)
+
+	test = SVMClassifierMixin.testSVM
 
 if __name__ == "__main__":
 	#run e.g. as python -m classifiers.DeBoomClassifier --modelPath /storage/MA/GoogleNews-vectors-negative300.bin --plot data/Veroff/*
