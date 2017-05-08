@@ -195,6 +195,7 @@ def plotCrossValResults(results, hyperparam1, hyperparam2, fixedParams = {}, hyp
 	plt.contour(X, Y, Z)
 	plt.xlabel(label1)
 	plt.ylabel(label2)
+	plt.colorbar()
 
 	plt.show(block = figureName is None)
 
