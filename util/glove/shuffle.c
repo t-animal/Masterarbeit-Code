@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define MAX_STRING_LENGTH 1000
 
@@ -84,6 +85,7 @@ int shuffle_merge(int num) {
     CREC *array;
     char filename[MAX_STRING_LENGTH];
     FILE **fid, *fout = stdout;
+    char tty = isatty(fileno(stderr));
     
     array = malloc(sizeof(CREC) * array_size);
     fid = malloc(sizeof(FILE) * num);
@@ -95,7 +97,7 @@ int shuffle_merge(int num) {
             return 1;
         }
     }
-    if(verbose > 0) fprintf(stderr, "Merging temp files: processed %ld lines.", l);
+    if(verbose > 0){ fprintf(stderr, "Merging temp files: processed %ld lines.", l); if(!tty)fprintf(stderr, "\n");}
     
     while(1) { //Loop until EOF in all files
         i = 0;
@@ -112,9 +114,13 @@ int shuffle_merge(int num) {
         l += i;
         shuffle(array, i-1); // Shuffles lines between temp files
         write_chunk(array,i,fout);
-        if(verbose > 0) fprintf(stderr, "\033[31G%ld lines.", l);
+        if(verbose > 0) fprintf(stderr, tty?"\033[31G%ld lines.":"Merging temp files: processed %ld lines.\n", l);
     }
-    fprintf(stderr, "\033[0GMerging temp files: processed %ld lines.", l);
+    if(tty){
+        fprintf(stderr, "\033[0GMerging temp files: processed %ld lines.", l);
+    }else{
+        fprintf(stderr, "Merging temp files: processed %ld lines.\n", l);
+    }
     for(fidcounter = 0; fidcounter < num; fidcounter++) {
         fclose(fid[fidcounter]);
         sprintf(filename,"%s_%04d.bin",file_head, fidcounter);
@@ -133,6 +139,7 @@ int shuffle_by_chunks() {
     CREC *array;
     FILE *fin = stdin, *fid;
     array = malloc(sizeof(CREC) * array_size);
+    char tty = isatty(fileno(stderr));
     
     fprintf(stderr,"SHUFFLING COOCCURRENCES\n");
     if(verbose > 0) fprintf(stderr,"array size: %lld\n", array_size);
@@ -142,13 +149,13 @@ int shuffle_by_chunks() {
         fprintf(stderr, "Unable to open file %s.\n",filename);
         return 1;
     }
-    if(verbose > 1) fprintf(stderr, "Shuffling by chunks: processed 0 lines.");
+    if(verbose > 1){ fprintf(stderr, "Shuffling by chunks: processed 0 lines.");if(!tty)fprintf(stderr, "\n");}
     
     while(1) { //Continue until EOF
         if(i >= array_size) {// If array is full, shuffle it and save to temporary file
             shuffle(array, i-2);
             l += i;
-            if(verbose > 1) fprintf(stderr, "\033[22Gprocessed %ld lines.", l);
+            if(verbose > 1) fprintf(stderr, tty?"\033[22Gprocessed %ld lines.":"Shuffling by chunks: processed %ld lines.\n", l);
             write_chunk(array,i,fid);
             fclose(fid);
             fidcounter++;
@@ -167,7 +174,7 @@ int shuffle_by_chunks() {
     shuffle(array, i-1); //Last chunk may be smaller than array_size
     write_chunk(array,i,fid);
     l += i;
-    if(verbose > 1) fprintf(stderr, "\033[22Gprocessed %ld lines.\n", l);
+    if(verbose > 1) fprintf(stderr, tty?"\033[22Gprocessed %ld lines.":"Shuffling by chunks: processed %ld lines.\n", l);
     if(verbose > 1) fprintf(stderr, "Wrote %d temporary file(s).\n", fidcounter + 1);
     fclose(fid);
     free(array);

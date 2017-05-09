@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define MAX_STRING_LENGTH 1000
 #define TSIZE	1048576
@@ -127,15 +128,17 @@ int get_counts() {
     HASHREC *htmp;
     VOCAB *vocab;
     FILE *fid = stdin;
+    char tty = isatty(fileno(stderr));
     
     fprintf(stderr, "BUILDING VOCABULARY\n");
-    if(verbose > 1) fprintf(stderr, "Processed %lld tokens.", i);
+    if(verbose > 1){ fprintf(stderr, "Processed %lld tokens.", i); if(!tty)fprintf(stderr, "\n");}
     sprintf(format,"%%%ds",MAX_STRING_LENGTH);
     while(fscanf(fid, format, str) != EOF) { // Insert all tokens into hashtable
         hashinsert(vocab_hash, str);
-        if(((++i)%100000) == 0) if(verbose > 1) fprintf(stderr,"\033[11G%lld tokens.", i);
+        if(((++i)%100000) == 0) if(verbose > 1)
+                fprintf(stderr, tty?"\033[11G%lld tokens.":"Processed %lld tokens.\n", i);
     }
-    if(verbose > 1) fprintf(stderr, "\033[0GProcessed %lld tokens.\n", i);
+    if(verbose > 1) fprintf(stderr, tty?"\033[0GProcessed %lld tokens.\n":"Processed %lld tokens.\n", i);
     vocab = malloc(sizeof(VOCAB) * vocab_size);
     for(i = 0; i < TSIZE; i++) { // Migrate vocab to array
         htmp = vocab_hash[i];

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 #define TSIZE 1048576
 #define SEED 1159241
@@ -230,7 +231,8 @@ int merge_files(int num) {
     fid = malloc(sizeof(FILE) * num);
     pq = malloc(sizeof(CRECID) * num);
     fout = stdout;
-    if(verbose > 1) fprintf(stderr, "Merging cooccurrence files: processed 0 lines.");
+    char tty = isatty(fileno(stderr));
+    if(verbose > 1){ fprintf(stderr, "Merging cooccurrence files: processed 0 lines.");if(!tty)fprintf(stderr, "\n");}
     
     /* Open all files and add first entry of each to priority queue */
     for(i = 0; i < num; i++) {
@@ -257,7 +259,8 @@ int merge_files(int num) {
     /* Repeatedly pop top node and fill priority queue until files have reached EOF */
     while(size > 0) {
         counter += merge_write(pq[0], &old, fout); // Only count the lines written to file, not duplicates
-        if((counter%100000) == 0) if(verbose > 1) fprintf(stderr,"\033[39G%lld lines.",counter);
+        if((counter%100000) == 0) if(verbose > 1)
+                fprintf(stderr,tty?"\033[39G%lld lines.":"Merging cooccurrence files: processed %lld lines.\n",counter);
         i = pq[0].id;
         delete(pq, size);
         fread(&new, sizeof(CREC), 1, fid[i]);
@@ -268,7 +271,11 @@ int merge_files(int num) {
         }
     }
     fwrite(&old, sizeof(CREC), 1, fout);
-    fprintf(stderr,"\033[0GMerging cooccurrence files: processed %lld lines.\n",++counter);
+    if(tty){
+        fprintf(stderr,"\033[0GMerging cooccurrence files: processed %lld lines.\n",++counter);
+    }else{
+        fprintf(stderr,"Merging cooccurrence files: processed %lld lines.\n",++counter);
+    }
     for(i=0;i<num;i++) {
         sprintf(filename,"%s_%04d.bin",file_head,i);
         remove(filename);
@@ -287,6 +294,7 @@ int get_cooccurrence() {
     HASHREC *htmp, **vocab_hash = inithashtable();
     CREC *cr = malloc(sizeof(CREC) * (overflow_length + 1));
     history = malloc(sizeof(long long) * window_size);
+    char tty = isatty(fileno(stderr));
     
     fprintf(stderr, "COUNTING COOCCURRENCES\n");
     if(verbose > 0) {
@@ -330,7 +338,7 @@ int get_cooccurrence() {
     sprintf(format,"%%%ds",MAX_STRING_LENGTH);
     sprintf(filename,"%s_%04d.bin",file_head, fidcounter);
     foverflow = fopen(filename,"w");
-    if(verbose > 1) fprintf(stderr,"Processing token: 0");
+    if(verbose > 1){ fprintf(stderr,"Processing token: 0");if(!tty)fprintf(stderr, "\n");}
     
     /* For each token in input stream, calculate a weighted cooccurrence sum within window_size */
     while (1) {
@@ -347,7 +355,7 @@ int get_cooccurrence() {
         if(feof(fid)) break;
         if(flag == 1) {j = 0; continue;} // Newline, reset line index (j)
         counter++;
-        if((counter%100000) == 0) if(verbose > 1) fprintf(stderr,"\033[19G%lld",counter);
+        if((counter%100000) == 0) if(verbose > 1) fprintf(stderr,tty?"\033[19G%lld":"Processing token %lld\n",counter);
         htmp = hashsearch(vocab_hash, str);
         if (htmp == NULL) continue; // Skip out-of-vocabulary words
         w2 = htmp->id; // Target word (frequency rank)
@@ -375,7 +383,7 @@ int get_cooccurrence() {
     }
     
     /* Write out temp buffer for the final time (it may not be full) */
-    if(verbose > 1) fprintf(stderr,"\033[0GProcessed %lld tokens.\n",counter);
+    if(verbose > 1) fprintf(stderr,tty?"\033[0GProcessed %lld tokens.\n":"Processed %lld tokens.\n",counter);
     qsort(cr, ind, sizeof(CREC), compare_crec);
     write_chunk(cr,ind,foverflow);
     sprintf(filename,"%s_0000.bin",file_head);
