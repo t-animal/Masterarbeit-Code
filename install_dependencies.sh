@@ -44,6 +44,8 @@ if [[ -r venv/bin/activate ]]; then
 	install_package argcomplete
 	install_package pylatex
 	install_package pyemd
+	install_package beautifulsoup4
+	install_package lxml
 
 	echo "=============================================================================="
 	echo "To use completion for tester.py, execute this after activating the virtualenv:"
