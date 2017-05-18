@@ -1,14 +1,150 @@
+import gzip
+import io
 import json
 import logging
 import numpy
 import scipy
 import scipy.stats
+import tarfile
 import textwrap
 
 from collections import OrderedDict
 from gensim.models import KeyedVectors
 from gensim.models.keyedvectors import Vocab
+from gensim.utils import simple_preprocess
 
+
+class FanFictionContainer():
+	"""A container class around our fanfiction corpus. Takes stories as created by storyscraper (after they've been tar'ed)
+	   and makes them easily iterable (and fast if iterated repeatedly). To do so it creates an index, which is specific
+	   for a preprocessing method (as different preprocessing methods might produce different token streams).
+	   You can persist the index by running the saveIndex method on the file
+	   (e.g. python -c 'from util.containers import FanFictionContainer as ff; ff.saveIndex(yourFileName, yourPreprocessingmethod)')
+	   If you change the preprocessing used, remove the index file!
+
+	   Often stories contain comments by the author in the first paragraphs and the last. You can reduce the impact
+	   of those comments by removing paragraphs from beginning and end in the constructor.
+
+	   """
+
+	log = logging.getLogger("de.t_animal.MA.util.FanFictionContainer")
+
+	def __init__(self, files, removeTrailingParagraphs = 2, minLength = 50, preprocessing = simple_preprocess):
+		""" :param files: list of filenames (or filename) of tar'ed stories as created by storyscraper. must end in tar.gz, or tar.bz, etc...
+		    :param removeTrailingParagraphs: how many paragraphs from start and end to remove per story
+		    :param minLength: how long (counted in tokens) a story has to be to be taken into account
+		    :param preprocessing: which preprocessing step to apply when counting story lengths
+		    :type files: list of strings (or a single string)
+		    :type removeTrailingParagraphs: int
+		    :type minLength: int
+		    :type preprocessing: callable"""
+		if type(files) == str:
+			files = [files]
+		self.files = files
+		self.indices = []
+		self.removeTrailingParagraphs = removeTrailingParagraphs
+		self.minLength = minLength
+		self.preprocessing = preprocessing
+
+		for file in self.files:
+			try:
+				with gzip.open(file.rsplit(".", 2)[0] + ".index", "rt", encoding="utf-8") as indexFile:
+					self.indices.append(json.load(indexFile))
+			except FileNotFoundError:
+				FanFictionContainer.log.warning("No index file found, will build index on first use (might take long!). Use FanFictionContainer.save to build and persist it!")
+				self.indices.append(None)
+
+	def __iter__(self):
+		"""Iterates over the stories, yielding each story as a list of tokens as returned by the chosen preprocessing method"""
+		for indexIndex, (index, file) in enumerate(zip(self.indices, self.files)):
+			if index is None:
+				self.indices[indexIndex] = self.buildIndex(file, self.preprocessing)
+				index = self.indices[indexIndex]
+
+			tar = tarfile.open(file)
+			nextFile = tar.next()
+			while nextFile is not None:
+				if not nextFile.isfile():
+					continue
+
+				storyId = nextFile.name.rsplit(".", 1)[0].split("/")[-1]
+
+				if self._passesFilter(index["stories"][storyId]):
+					content = json.load(io.TextIOWrapper(tar.extractfile(nextFile), "utf-8"))
+					r = self.removeTrailingParagraphs
+					yield [token for tokens in map(self.preprocessing, content["storytext"][r:-r]) for token in tokens]
+
+				nextFile = tar.next()
+
+	def __len__(self):
+		length = 0
+
+		for indexIndex, (index, file) in enumerate(zip(self.indices, self.files)):
+			if index is None:
+				self.indices[indexIndex] = self.buildIndex(file, self.preprocessing)
+				index = self.indices[indexIndex]
+
+			for value in index["stories"].values():
+				if self._passesFilter(value):
+					length += 1
+
+		return length
+
+	def _passesFilter(self, indexEntry):
+		r = self.removeTrailingParagraphs
+		return indexEntry["paragraphs"] > r * 2 and \
+		   sum(indexEntry["paragraphLengths"][r:-r]) > self.minLength
+
+	@staticmethod
+	def buildIndex(file, preprocessing = simple_preprocess):
+		index = {"storycount": 0, "stories": {}}
+
+		tar = tarfile.open(file)
+		filesDone = 0
+		nextFile = tar.next()
+
+		FanFictionContainer.log.info("Beginning building index")
+		while nextFile is not None:
+			if not nextFile.isfile():
+				continue
+
+			if filesDone % 10000 == 0:
+				FanFictionContainer.log.info("%d files finished", filesDone)
+
+			try:
+				content = json.load(io.TextIOWrapper(tar.extractfile(nextFile), "utf-8"))
+				storyId = nextFile.name.rsplit(".", 1)[0].split("/")[-1]
+				processedStory = map(preprocessing, content["storytext"])
+				index["stories"][storyId] = {
+					"paragraphs": len(content["storytext"]),
+					"paragraphLengths": list(map(len, processedStory))
+				}
+
+			except json.decoder.JSONDecodeError:
+				#some files may have not been saved properly, just ignore them
+				FanFictionContainer.log.debug("File %s is invalid json and is ignored", nextFile.name)
+				pass
+
+			nextFile = tar.next()
+			filesDone += 1
+
+		return index
+
+	@staticmethod
+	def saveIndex(file, preprocessing = simple_preprocess):
+		"""Build and save the index of the tar'ed stories as created by storyscraper.
+		:param file: the filenames of the tar'ed stories as created by storyscraper. must end in tar.gz, or tar.bz, etc...
+		:param preprocessing: which preprocessing step to apply when counting story lengths
+		:type file: string
+		:type preprocessing: callable"""
+		with gzip.open(file.rsplit(".", 2)[0] + ".index", "wt", encoding="utf-8") as indexFile:
+			index = FanFictionContainer.buildIndex(file, preprocessing)
+			json.dump(index, indexFile)
+
+if __name__ == "__main__":
+	logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+				level=logging.DEBUG)
+	FanFictionContainer.saveIndex("/storage/MA/stories_tv.tar.gz")
 
 class LazyModel():
 	"""
