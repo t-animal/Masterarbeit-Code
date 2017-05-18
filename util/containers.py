@@ -13,6 +13,28 @@ from gensim.models import KeyedVectors
 from gensim.models.keyedvectors import Vocab
 from gensim.utils import simple_preprocess
 
+class MultiGenreFanFictionContainer():
+	"""Allows iteration over multiple FanFictionContainers, taking one item from each container after the other.
+	   Balances genres by yielding the same number of elements from each container"""
+
+	def __init__(self, ffcontainers, maxPerGenre = 1500000):
+		self.containers = ffcontainers
+		self.maxPerGenre = maxPerGenre
+
+		containerLengths  = [len(c) for c in ffcontainers]
+		if any(c < maxPerGenre for c in containerLengths):
+			self.maxPerGenre = min(containerLengths)
+			log.warning("At least one container is short than maxPerGenre "
+				        "(%d) elements. Truncating each container to %d", maxPerGenre, self.maxPerGenre)
+
+	def __iter__(self):
+		iterators = list(map(iter, self.containers))
+		for i in range(self.maxPerGenre):
+			for iterator in iterators:
+				yield(next(iterator))
+
+	def __len__(self):
+		return len(self.containers) * self.maxPerGenre
 
 class FanFictionContainer():
 	"""A container class around our fanfiction corpus. Takes stories as created by storyscraper (after they've been tar'ed)
@@ -29,66 +51,54 @@ class FanFictionContainer():
 
 	log = logging.getLogger("de.t_animal.MA.util.FanFictionContainer")
 
-	def __init__(self, files, removeTrailingParagraphs = 2, minLength = 50, preprocessing = simple_preprocess):
-		""" :param files: list of filenames (or filename) of tar'ed stories as created by storyscraper. must end in tar.gz, or tar.bz, etc...
+	def __init__(self, file, removeTrailingParagraphs = 2, minLength = 50, preprocessing = simple_preprocess):
+		""" :param files: filename of tar'ed stories as created by storyscraper. must end in tar.gz, or tar.bz, etc...
 		    :param removeTrailingParagraphs: how many paragraphs from start and end to remove per story
 		    :param minLength: how long (counted in tokens) a story has to be to be taken into account
 		    :param preprocessing: which preprocessing step to apply when counting story lengths
-		    :type files: list of strings (or a single string)
+		    :type file: string
 		    :type removeTrailingParagraphs: int
 		    :type minLength: int
 		    :type preprocessing: callable"""
-		if type(files) == str:
-			files = [files]
-		self.files = files
-		self.indices = []
+		self.file = file
+		self.index = []
 		self.removeTrailingParagraphs = removeTrailingParagraphs
 		self.minLength = minLength
 		self.preprocessing = preprocessing
 
-		for file in self.files:
-			try:
-				with gzip.open(file.rsplit(".", 2)[0] + ".index", "rt", encoding="utf-8") as indexFile:
-					self.indices.append(json.load(indexFile))
-			except FileNotFoundError:
-				FanFictionContainer.log.warning("No index file found, will build index on first use (might take long!). Use FanFictionContainer.save to build and persist it!")
-				self.indices.append(None)
+		try:
+			with gzip.open(file.rsplit(".", 2)[0] + ".index", "rt", encoding="utf-8") as indexFile:
+				self.index = json.load(indexFile)
+		except FileNotFoundError:
+			FanFictionContainer.log.warning("No index file found, will build index on first use (might take long!). Use FanFictionContainer.save to build and persist it!")
+			self.index = None
 
 	def __iter__(self):
 		"""Iterates over the stories, yielding each story as a list of tokens as returned by the chosen preprocessing method"""
-		for indexIndex, (index, file) in enumerate(zip(self.indices, self.files)):
-			if index is None:
-				self.indices[indexIndex] = self.buildIndex(file, self.preprocessing)
-				index = self.indices[indexIndex]
+		if self.index is None:
+			self.index = self.buildIndex(self.file, self.preprocessing)
 
-			tar = tarfile.open(file)
+		tar = tarfile.open(self.file)
+		nextFile = tar.next()
+		while nextFile is not None:
+			if not nextFile.isfile():
+				continue
+
+			storyId = nextFile.name.rsplit(".", 1)[0].split("/")[-1]
+
+			if self._passesFilter(self.index["stories"][storyId]):
+				content = json.load(io.TextIOWrapper(tar.extractfile(nextFile), "utf-8"))
+				r = self.removeTrailingParagraphs
+				yield [token for tokens in map(self.preprocessing, content["storytext"][r:-r]) for token in tokens]
+
 			nextFile = tar.next()
-			while nextFile is not None:
-				if not nextFile.isfile():
-					continue
-
-				storyId = nextFile.name.rsplit(".", 1)[0].split("/")[-1]
-
-				if self._passesFilter(index["stories"][storyId]):
-					content = json.load(io.TextIOWrapper(tar.extractfile(nextFile), "utf-8"))
-					r = self.removeTrailingParagraphs
-					yield [token for tokens in map(self.preprocessing, content["storytext"][r:-r]) for token in tokens]
-
-				nextFile = tar.next()
 
 	def __len__(self):
-		length = 0
+		if index is None:
+			self.indices[indexIndex] = self.buildIndex(self.file, self.preprocessing)
+			index = self.indices[indexIndex]
 
-		for indexIndex, (index, file) in enumerate(zip(self.indices, self.files)):
-			if index is None:
-				self.indices[indexIndex] = self.buildIndex(file, self.preprocessing)
-				index = self.indices[indexIndex]
-
-			for value in index["stories"].values():
-				if self._passesFilter(value):
-					length += 1
-
-		return length
+		return len(list(filter(self._passesFilter, index["stories"].values())))
 
 	def _passesFilter(self, indexEntry):
 		r = self.removeTrailingParagraphs
