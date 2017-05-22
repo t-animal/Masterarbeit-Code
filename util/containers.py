@@ -17,6 +17,8 @@ class MultiGenreFanFictionContainer():
 	"""Allows iteration over multiple FanFictionContainers, taking one item from each container after the other.
 	   Balances genres by yielding the same number of elements from each container"""
 
+	log = logging.getLogger("de.t_animal.MA.util.FanFictionContainer")
+
 	def __init__(self, ffcontainers, maxPerGenre = 1500000):
 		self.containers = ffcontainers
 		self.maxPerGenre = maxPerGenre
@@ -24,7 +26,7 @@ class MultiGenreFanFictionContainer():
 		containerLengths  = [len(c) for c in ffcontainers]
 		if any(c < maxPerGenre for c in containerLengths):
 			self.maxPerGenre = min(containerLengths)
-			log.warning("At least one container is short than maxPerGenre "
+			MultiGenreFanFictionContainer.log.warning("At least one container is short than maxPerGenre "
 				        "(%d) elements. Truncating each container to %d", maxPerGenre, self.maxPerGenre)
 
 	def __iter__(self):
@@ -94,11 +96,10 @@ class FanFictionContainer():
 			nextFile = tar.next()
 
 	def __len__(self):
-		if index is None:
-			self.indices[indexIndex] = self.buildIndex(self.file, self.preprocessing)
-			index = self.indices[indexIndex]
+		if self.index is None:
+			self.index = self.buildIndex(self.file, self.preprocessing)
 
-		return len(list(filter(self._passesFilter, index["stories"].values())))
+		return len(list(filter(self._passesFilter, self.index["stories"].values())))
 
 	def _passesFilter(self, indexEntry):
 		r = self.removeTrailingParagraphs
