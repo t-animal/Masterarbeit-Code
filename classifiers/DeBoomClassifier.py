@@ -94,7 +94,7 @@ class DeBoomClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 	def train(self, trainFilenames):
 		self.learnRepresentationWeights(trainFilenames)
-		trainSVM(trainFilenames)
+		self.trainSVM(trainFilenames)
 
 	test = SVMClassifierMixin.testSVM
 
