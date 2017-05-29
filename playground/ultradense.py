@@ -6,6 +6,7 @@ import numpy as np
 import random
 import scipy
 
+from datetime import datetime
 from itertools import starmap
 from numpy.linalg import norm
 
@@ -38,7 +39,7 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 	"""
 
 	batchSize = 100
-	learnRate = 5
+	learnRate = 0.5 #paper starts at 5, but that's very inefficient
 
 	assert(group1 and group2)
 	assert(group1[0].size == group2[0].size)
@@ -56,8 +57,8 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 		"""The derivative of `costFunction` with respect to one entry in Q, specified by row and column.
 		I.e.
 		$d/dq_{row,col} ||PQ(e_w-e_v)|| = d/dq_{row,col} ||PQv|| = \frac{v_{row}(v_1q_{row,1} + v_2q_{row,2}...)}{||PQ(e_w-e_v)||}$
-		All lines where row > dstar return 0 as these columns in P are all 0"""
-		if row > dstar:
+		All lines where row >= dstar return 0 as the corresponding columns in P are all 0"""
+		if row >= dstar:
 			return 0
 
 		v = (ew-ev).reshape(d, 1)
@@ -71,6 +72,8 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 
 
 	random.seed(42)
+	startTime = datetime.now()
+	startCost = sum(starmap(costFunction, itertools.product(group1, group2)))
 	for iteration in itertools.count(1):
 		L = list(itertools.product(group1, group2))
 		random.shuffle(L)
@@ -81,14 +84,35 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 			log.info("Iteration #%3d, batch %4d: Cost is %9.5f, learnRate was %7.5f", iteration, batchNo, cost, learnRate)
 
 			Qderiv = np.matrix(np.zeros((d,d)))
-			for row, col in zip(range(dstar), range(d)):
-				Qderiv[(row, col)] = sum([derivedCostFunction(ew, ev, row, col) for ew, ev in batch])/len(batch)
+			for row in range(dstar):
+				for col in range(d):
+					Qderiv[(row, col)] = sum([derivedCostFunction(ew, ev, row, col) for ew, ev in batch])/len(batch)
 
 			Q -= learnRate * Qderiv
 			Q = reorthogonalize(Q)
 
-		#Q: does the learn rate decrease per iteration or per batch? paper reads like per iteration, even though that's weird
-		learnRate *= 0.99
+			#Q: does the learn rate decrease per iteration or per batch? paper reads like per iteration, even though that's weird
+			learnRate *= 0.99
+
+		if learnRate < 0.00001:
+			break
+
+	endTime = datetime.now()
+	totalCost = sum(starmap(costFunction, itertools.product(group1, group2)))
+	log.info("Terminating at after %d iterations over %d batches with termanation learnRate %f.", iteration, batchNo, learnRate)
+	log.info("Training took %s", endTime - startTime)
+	log.info("Cost with random Q was %f (averaged over all pairs: %f)", startCost, startCost/len(group1)/len(group2))
+	log.info("Final total cost is %f (averaged over all pairs: %f)", totalCost, totalCost/len(group1)/len(group2))
+
+	with open("final_Q.pickle", "wb") as file:
+		pickle.dump({
+			"iterations": iteration,
+			"batches": batchNo,
+			"learnRate": learnRate,
+			"totalCost": totalCost,
+			"avgCost": totalCost/len(group1)/len(group2),
+			"Q": Q
+			}, file)
 
 
 if __name__ == "__main__":
