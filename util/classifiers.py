@@ -18,8 +18,26 @@ from sklearn.utils.validation import check_X_y, check_is_fitted
 
 log = logging.getLogger("de.t_animal.MA.util.classifiers")
 
+
 class Classifier(BaseEstimator, ClassifierMixin):
 	""" A classifier base class. It mainly just specifies the interface """
+
+	""" Stopwords are the 100 most frequent words from the wikipedia, except some words which we think might have an impact on detection rate"""
+	stopwords = {'the', 'of', 'and', 'in', 'to', 'was', 'is', 'for', 'on', 'as', 'by', 'with',
+	             'he', 'at', 'from', 'that', 'his', 'it', 'an', 'were', 'are', 'also', 'which',
+	             'this', 'or', 'be', 'first', 'new', 'has', 'had', 'one', 'their', 'after', 'not',
+	             'who', 'its', 'but', 'two', 'her', 'they', 'she', 'references', 'have', 'th', 'all',
+	             'other', 'been', 'time', 'when', 'school', 'during', 'may', 'year', 'into', 'there',
+	             'world', 'city', 'up', 'de', 'university', 'no', 'state', 'more', 'national', 'years',
+	             'united', 'external', 'over', 'links', 'only', 'american', 'most', 'team', 'three',
+	             'film', 'out', 'between', 'would', 'later', 'where', 'can', 'some', 'st', 'season',
+	             'about', 'south', 'born', 'used', 'states', 'under', 'him', 'then', 'second', 'part',
+	             'such', 'made', 'john', 'war', 'known', 'while'} - \
+	             {'he', 'his', 'first', 'new', 'her', 'they', 'she', 'city', 'world', 'university', 'united',
+	             'him', 'second'}
+
+	def __init__(self):
+		self.removedStopWords = {k: 0 for k in self.stopwords}
 
 	def fit(self, X, y):
 		"""Fit method as required by the scikit-learn estimator interface"""
@@ -89,6 +107,20 @@ class Classifier(BaseEstimator, ClassifierMixin):
 		   A generator creating the vectors describing the given file
 		"""
 		raise NotImplemented()
+
+	def removeStopWords(self, vectorTuples):
+		"""Removes stopwords from an iterable of (word, vector)-tuples. It counts which word was removed how often
+		   and this counter can be returned by getStopWordCounter. Not threadsafe!"""
+		self.removedStopWords = {k: 0 for k in self.stopwords}
+		for vectorTuple in vectorTuples:
+			if vectorTuple[0] in self.stopwords:
+				log.debug("Not counting stopword %s", vectorTuple[0])
+				self.removedStopWords[vectorTuple[0]] += 1
+				continue
+			yield vectorTuple
+
+	def getStopWordCounter(self):
+		return self.removedStopWords
 
 
 class EmbeddingsClassifier(Classifier):

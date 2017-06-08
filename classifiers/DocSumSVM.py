@@ -21,13 +21,14 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath = None, power = 3, multiplier = 100, min_probability = 0, SVM_C = 2.5, gamma="auto"):
+	def __init__(self, modelPath = None, power = 1, multiplier = 1, min_probability = 0, SVM_C = 2.5, gamma = "auto", nostopwords = True):
 		super().__init__(modelPath)
 		self.power = int(power)
 		self.multiplier = float(multiplier)
 		self.min_probability = float(min_probability)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
+		self.nostopwords = nostopwords
 
 	def _generateDescribingVectors(self, filename):
 		"""Vectorizes a file, averages the vectors
@@ -36,7 +37,10 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		   :type filename: string
 		   :returns: numpy array
 		"""
-		vectorizedFile = self._vectorizeFile(filename)
+		if self.nostopwords:
+			vectorizedFile = list(self.removeStopWords(self._vectorizeFile(filename)))
+		else:
+			vectorizedFile = self._vectorizeFile(filename)
 		# tfidfFactors = self.tfidf.transform([" ".join([x[0] for x in vectorizedFile])]).getrow(0).toarray()[0]
 
 		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
