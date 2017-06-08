@@ -105,7 +105,7 @@ def word2vecFanFic(corpusPaths, modelPath, dimensions, workers):
 		modelPath = datetime.now().strftime("w2v--fanfic--%Y-%m-%d--%H:%M:%S")
 
 	log.info("Loading corpus")
-	corpus = MultiGenreFanFictionContainer(*[FanFictionContainer(path) for path in corpusPaths])
+	corpus = MultiGenreFanFictionContainer([FanFictionContainer(path) for path in corpusPaths])
 
 	_word2vec(corpus, modelPath, dimensions, workers)
 
