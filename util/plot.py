@@ -70,9 +70,14 @@ def plotHistogram(class1, class2=None):
 
 
 def plotVectorList(class1, class2=None):
+	#do weird reshaping for legacy reasons. from now on all vectors should have the same shape
+	class1 = [np.array(v).reshape(max(v.shape)) for v in class1]
 	if class2:
-		class1 = class1 + [np.array([-99]*class1[0].shape[0])]*2 + class2
-	vectors = np.transpose(np.array(class1))
+		class2 = [np.array(v).reshape(max(v.shape)) for v in class2]
+		vectors = class1 + [np.array([-99]*class1[0].shape[0])]*2 + class2
+	else:
+		vectors = class1
+	vectors = np.transpose(np.array(vectors))
 
 	cmap = matplotlib.cm.get_cmap("viridis")
 	cmap.set_over("r")
