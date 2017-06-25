@@ -194,6 +194,7 @@ if __name__ == "__main__":
 	#some cosmetics on the hyperparameters
 	cvResults = list(reversed(sorted(cvResults, key=operator.itemgetter(1))))
 	resultDict = OrderedDict([(str(sorted(k.items())).replace("', ", "': "), v.getDict()) for (k,v) in cvResults])
+	resultDict["meta"] = OrderedDict([("classifier",args.classifier), ("datasets", args.datasets), ("optimized", args.optimize)])
 	bestParams, bestItem = cvResults[0]
 	json_output = json.dumps(resultDict, indent = 3)
 

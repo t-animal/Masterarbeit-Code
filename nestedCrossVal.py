@@ -261,6 +261,7 @@ if __name__ == "__main__":
 		sys.exit(1)
 
 	resultDict = OrderedDict()
+	resultDict["meta"] = OrderedDict([("classifier",args.classifier), ("datasets", args.datasets), ("optimized", args.optimize)])
 	resultDict["nestedCVResult"] = bestItem.getDict()
 	#some cosmetics on the hyperparameters
 	resultDict["innerCVResults"] = [(str(sorted(k.items())).replace("', ", "': "), v.getDict()) for (k,v) in innerCVResults]
