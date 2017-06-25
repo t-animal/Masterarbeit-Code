@@ -1,4 +1,5 @@
 #!../venv/bin/python
+#encoding: utf-8
 
 import json
 import numpy as np
@@ -62,7 +63,7 @@ def patchMissingPValue(allResults):
 def getLatexDoc(title, results):
 	def groupSortingKey(key):
 		if "." in key:
-			mod, retrofit = key.split(".")
+			mod, retrofit = key.rsplit(".", 1)
 			return retrofit + mod
 		else:
 			return "     " + key
@@ -84,45 +85,43 @@ def getLatexDoc(title, results):
 			if value > bestPercentage[index]:
 				bestPercentage[index] = value
 
-	for lineno, line in enumerate(percentages):
-		for index, value in enumerate(line):
-			if abs(bestPercentage[index] - value) <= 0.05:
-				percentages[lineno][index] = bold(percentages[lineno][index])
-
-	bestPercentage = np.array(bestPercentage)
-
-
 	geometry_options = {
 		"landscape": True,
 		"a4paper": True,
-		"margin": "0.5in"
+		"margin": "0.25in"
 	}
 	doc = Document("testoutput", geometry_options=geometry_options)
 	doc.packages.append(Package("FiraSans", options=["sfdefault"]))
 	# doc.packages.append(Package("xcolor", options=["dvipsnames"]))
 
-	table = Tabular("l|ccccccc")
+	table = Tabular("l|cccccccc")
 
-	table.add_row([" "] + [Rotate(60, x) for x in dataSets])
+	table.add_row([" "] + [Rotate(60, x) for x in dataSets] + ["ø"])
 	table.add_hline()
 
 	for index, (percentages, stddevs, pValues) in enumerate(zip(percentages, stddevs, pValues)):
-		if "." in models[index] and not models[index-1].endswith(models[index][-3:]):
+		if "." in models[index] and not models[index-1].endswith(models[index].rsplit(".", 1)[-1]):
 			table.add_empty_row()
-		table.add_row([MultiRow(2, data = models[index])] + [TextColor("lightgray", t) if v > 0.05 else t for t,v in zip([NoEscape(str(x) + "\%") for x in percentages], pValues)])
+
+		displayPercentages = list(percentages)
+		for column, value in enumerate(percentages):
+			if abs(bestPercentage[column] - value) <= 0.05:
+				displayPercentages[column] = bold(percentages[column])
+
+		label = [MultiRow(2, data = models[index])]
+		data = [TextColor("lightgray", t) if v > 0.05 else t for t,v in zip([NoEscape(str(x) + "\%") for x in displayPercentages], pValues)]
+		table.add_row(label + data + [str(round(sum(percentages)/len(percentages), 2))])
 
 		pText = [("<1\\textperthousand" if p < 0.01 else str(round(p * 100,2))+"\%") if p < 0.1 else ">10\%" for p in pValues]
 		pText = [SmallText(NoEscape("$\pm$ {}, p: {}".format(s, p))) for s, p in zip(stddevs, pText)]
-		table.add_row([""]+[TextColor("lightgray", t) if v > 0.05 else t for t, v in zip(pText, pValues)])
+		table.add_row([""]+[TextColor("lightgray", t) if v > 0.05 else t for t, v in zip(pText, pValues)] + [""])
 
 
-	# resultsFigure = Figure()
-	# resultsFigure.append(LargeText(table))
-	# resultsFigure.add_caption(
+	bestPercentage = np.array(bestPercentage)
 
 	doc.append(Section(title))
 	centeredTable = Center()
-	centeredTable.append(LargeText(table))
+	centeredTable.append(table)
 	doc.append(centeredTable)
 	doc.append(VerticalSpace("1em"))
 	doc.append("Results of 5-fold stratified nested cross validation on various datasets using the given classifier.")
