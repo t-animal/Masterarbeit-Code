@@ -8,7 +8,6 @@ import pickle
 import re
 
 from sklearn import svm as SVM
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.utils.validation import check_is_fitted
 from gensim.models import Word2Vec
 from util import softmax, isAroused
@@ -21,10 +20,8 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath = None, power = 1, multiplier = 1, min_probability = 0, SVM_C = 2.5, gamma = "auto", nostopwords = True):
+	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False):
 		super().__init__(modelPath)
-		self.power = int(power)
-		self.multiplier = float(multiplier)
 		self.min_probability = float(min_probability)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
@@ -41,33 +38,16 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 			vectorizedFile = list(self.removeStopWords(self._vectorizeFile(filename)))
 		else:
 			vectorizedFile = self._vectorizeFile(filename)
-		# tfidfFactors = self.tfidf.transform([" ".join([x[0] for x in vectorizedFile])]).getrow(0).toarray()[0]
 
 		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
 		for token, vector in vectorizedFile:
 			fileSum += vector
-			# try:
-			# 	fileSum += vector * tfidfFactors[self.tfidf.vocabulary_[token]]
-			# except KeyError:
-			# 	pass #ignore tokens not in tfidf
 
 		fileSum /= len(vectorizedFile)
-		fileSum *= self.multiplier
-
-		if self.power % 2 == 1:
-			fileSum **= self.power
-		else:
-			sign = np.sign(fileSum)
-			fileSum **= self.power
-			fileSum *= sign
 
 		yield fileSum
 
 	def train(self, trainFilenames):
-		# self.tfidf = TfidfVectorizer(input="filename")
-		# self.tfidf.fit(trainFilenames)
-		# self.tfidf.set_params(input="content")
-
 		self.trainSVM(trainFilenames, {"probability": self.min_probability > 0,
 		                               "C": self.SVM_C,
 		                               "gamma": self.gamma,
@@ -89,7 +69,7 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
 
 		for filename in testFilenames:
-			fileSum = self._getDescribingVectors(filename)[0]
+			fileSum = self._getDescribingVectors(filename)[0].flatten()
 
 			distance = self.svm.decision_function([fileSum])[0]
 			testResult.additional(distances = {filename: distance})
