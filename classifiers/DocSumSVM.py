@@ -8,6 +8,7 @@ import pickle
 import re
 
 from sklearn import svm as SVM
+from sklearn.preprocessing import normalize
 from sklearn.utils.validation import check_is_fitted
 from gensim.models import Word2Vec
 from util import softmax, isAroused
@@ -20,11 +21,12 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False):
+	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False, norm="l2"):
 		super().__init__(modelPath)
 		self.min_probability = float(min_probability)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
+		self.norm = norm
 		self.nostopwords = nostopwords
 
 	def _generateDescribingVectors(self, filename):
@@ -39,11 +41,23 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 		else:
 			vectorizedFile = self._vectorizeFile(filename)
 
-		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64)
+		fileSum = np.zeros(vectorizedFile[0][1].size, dtype=np.float64).reshape(1,-1)
 		for token, vector in vectorizedFile:
 			fileSum += vector
 
-		fileSum /= len(vectorizedFile)
+		if self.norm == "length":
+			fileSum /= len(vectorizedFile)
+		else:
+			fileSum = normalize(fileSum, self.norm)
+
+		if self.nostopwords:
+			stopWordCounter = np.array([[v for k,v in sorted(self.getStopWordCounter().items())]], dtype=np.float64)
+			if self.norm == "length":
+				stopWordCounter /= len(vectorizedFile)
+			else:
+				stopWordCounter = normalize(stopWordCounter, self.norm)
+
+			fileSum = np.append(fileSum, stopWordCounter).reshape(1,-1)
 
 		yield fileSum
 
