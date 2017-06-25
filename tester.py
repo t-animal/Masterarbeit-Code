@@ -198,6 +198,8 @@ if __name__ == "__main__":
 		if "all" in args.plot:
 			args.plot = _dataSets.keys()
 		for func in args.plotFunction:
+			trainFiles, validateFiles = generateTrainAndValidateset(args.plot, args.plot)
+			classifier.train(trainFiles)
 			classifier.plot(getAllFiles(args.plot), func)
 
 	if args.train or args.load:
