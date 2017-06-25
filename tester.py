@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
 
 	if args.crossValidate:
-		crossSet = generateCrossValidationSets(args.crossTest)
+		crossSet = generateCrossValidationSets(args.crossValidate)
 
 		result = CrossValidationResultContainer("aroused", "nonAroused")
 
@@ -223,4 +223,4 @@ if __name__ == "__main__":
 			trainSet = crossTestSet["crossValidate"][0]["train"] + crossTestSet["crossValidate"][0]["validate"]
 			result.addResult(trainAndTest(classifier, trainSet, crossTestSet["outerValidate"]))
 
-		printResult(result, args.json, args.crossTest, trainSet, None, args.crossTest)
+		printResult(result, args.json, args.crossValidate, trainSet, None, args.crossValidate)
