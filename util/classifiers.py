@@ -239,9 +239,9 @@ class SVMClassifierMixin:
 
 			for vector in vectors:
 				if isAroused(filename):
-					arousedVectors.append(vector)
+					arousedVectors.append(vector.flatten())
 				else:
-					nonArousedVectors.append(vector)
+					nonArousedVectors.append(vector.flatten())
 
 				log.debug("Vector: %s", str(vector))
 
@@ -271,7 +271,7 @@ class SVMClassifierMixin:
 		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
 
 		for filename in testFilenames:
-			feature = self._getDescribingVectors(filename)[0]
+			feature = self._getDescribingVectors(filename)[0].flatten()
 
 			result = self.svm.predict([feature])[0]
 			testResult.addResult(bool(result), isAroused(filename))
