@@ -1,8 +1,10 @@
 #!../venv/bin/python
 
+import datetime
 import itertools
 import logging as log
 import numpy as np
+import math
 import random
 import scipy
 
@@ -10,10 +12,13 @@ from datetime import datetime
 from itertools import starmap
 from numpy.linalg import norm
 
+import pickle
+from gensim.models import KeyedVectors
+
 """This is a playground file to test out rothe et al.'s paper "ultra dense word embeddings"
 """
 
-def batcher(iterable, batchSize):
+def batches(iterable, batchSize = 200):
 	batch = []
 	for item in iterable:
 		batch.append(item)
@@ -25,21 +30,30 @@ def batcher(iterable, batchSize):
 	if len(batch) > 0:
 		yield batch
 
-def seperateDifferentGroups(group1, group2, dimensions = 1):
-	"""Equation (3), used to maximize distance of words in different groups. The words to which the
-	   word vectors in the groups correspond must have opposing meaning with regard to the desired
+def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alpha = 0.8):
+	"""Equation (3), used to minimize (and maximize) distance of groups of words of (opposing) meaning in a subspace.
+	   The words to which the word vectors in the groups correspond must have opposing meaning with regard to the desired
 	   information
 
-	   :param group1: word vectors of the first group
-	   :param group2: word vectors of the second group
+	   :param group1: word vectors of the first group (e.g. positive sentiment)
+	   :param group2: word vectors of the second group (e.g. negative sentiment)
+	   :param dimensions: the number of dimensions to fit the information to
+	   :param batchSize: the batchSize to use
+	   :param alpha: combination factor alpha (how much influence [0 <= alpha <= 1]
 	   :type group1: list of np.array
 	   :type group2: list of np.array
+	   :type dimensions: int
+	   :type batchSize: int
+	   :type alpha: float
 
-	   :returns: int, the cost factor to optimize
+	   :returns: np.matrix, the optimized transformation matrix
 	"""
 
-	batchSize = 100
-	learnRate = 0.5 #paper starts at 5, but that's very inefficient
+	#we take our learning rate from the plot in their repo, showing that the sweet spot lies at about the 400th iteration
+	#when starting from a learning rate of 1 => 1*0.99^400 = 0.017 and ends at the 430th iteration 1*0.99^430 => 0.013
+	#and add some space around it
+	learnRate = 5 * 0.22 #paper starts at 5, but that's very inefficient, and this implementation is horribly inefficient, so prune that
+	abortRate = 5 * 0.008 #at which learning rate to abort
 
 	assert(group1 and group2)
 	assert(group1[0].size == group2[0].size)
@@ -49,9 +63,15 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 	P = np.matrix(np.eye(dstar, d))
 	Q = np.matrix(scipy.stats.ortho_group.rvs(d, random_state = 42))
 
+	costCache = {}
 	def costFunction(ew, ev):
-		"""The part of equation (3) under the sum, i.e. the cost function for one vector pair"""
-		return norm(P * Q * (ew - ev).reshape(d, 1))
+		"""The part of equation (3) and (4) under the sum, i.e. the cost function for one vector pair"""
+		key = (id(ew), id(ev))
+		if key in costCache:
+			return costCache[key]
+
+		costCache[key] = norm(P * Q * (ew - ev).reshape(d, 1))
+		return costCache[key]
 
 	def derivedCostFunction(ew, ev, row, col):
 		"""The derivative of `costFunction` with respect to one entry in Q, specified by row and column.
@@ -61,13 +81,15 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 		if row >= dstar:
 			return 0
 
+		assert(not all(ew == ev))
+
 		v = (ew-ev).reshape(d, 1)
 		return v[col] * ((Q[row] * v)[(0,0)])/costFunction(ew, ev)
 
 	def reorthogonalize(Q):
 		U,S,V = np.linalg.svd(Q)
 		newQ = U * V #linalg.svd returns V transposed
-		assert((newQ * np.transpose(newQ) - np.identity(d) < 0.0001).all())
+		assert((newQ * np.transpose(newQ) - np.identity(d) < 0.00001).all())
 		return newQ
 
 
@@ -75,26 +97,48 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 	startTime = datetime.now()
 	startCost = sum(starmap(costFunction, itertools.product(group1, group2)))
 	for iteration in itertools.count(1):
-		L = list(itertools.product(group1, group2))
-		random.shuffle(L)
-		batches = batcher(L, batchSize)
+		LDiffGroup = list(itertools.product(group1, group2))
+		LSameGroup = list(itertools.combinations(group1, 2)) + list(itertools.combinations(group2, 2))
+		random.shuffle(LDiffGroup)
+		random.shuffle(LSameGroup)
 
-		for batchNo, batch in enumerate(batches):
-			cost = sum(starmap(costFunction, batch))/len(batch)
-			log.info("Iteration #%3d, batch %4d: Cost is %9.5f, learnRate was %7.5f", iteration, batchNo, cost, learnRate)
+		for ew, ev in LSameGroup:
+			assert(not all(ew == ev))
+		for ew, ev in LDiffGroup:
+			assert(not all(ew == ev))
 
-			Qderiv = np.matrix(np.zeros((d,d)))
+		for batchNo, (batchDiffGroup, batchSameGroup) in enumerate(zip(batches(LDiffGroup), batches(LSameGroup))):
+			if batchNo%5 == 0:
+				costSameGroup = sum(starmap(costFunction, batchSameGroup))/len(batchSameGroup)
+				costDiffGroup = -sum(starmap(costFunction, batchDiffGroup))/len(batchDiffGroup)
+				cost = ((1-alpha) *  costDiffGroup + alpha * costSameGroup)
+				log.info("Iteration #%3d, batch %4d: Cost is %9.5f (same: %9.5f, diff: %9.5f), learnRate was %8.6f",
+				         iteration, batchNo, cost, costSameGroup, costDiffGroup, learnRate)
+
+			QDerivedDiffGroup = np.matrix(np.zeros((d,d)))
 			for row in range(dstar):
 				for col in range(d):
-					Qderiv[(row, col)] = sum([derivedCostFunction(ew, ev, row, col) for ew, ev in batch])/len(batch)
+					QDerivedDiffGroup[(row, col)] = -sum([derivedCostFunction(ew, ev, row, col) for ew, ev in batchDiffGroup])/len(batchDiffGroup)
 
-			Q -= learnRate * Qderiv
+			QDerivedSameGroup = np.matrix(np.zeros((d,d)))
+			for row in range(dstar):
+				for col in range(d):
+					QDerivedSameGroup[(row, col)] = sum([derivedCostFunction(ew, ev, row, col) for ew, ev in batchSameGroup])/len(batchSameGroup)
+
+			Q -= learnRate * (alpha *  QDerivedDiffGroup + (1 - alpha) * QDerivedSameGroup)
 			Q = reorthogonalize(Q)
 
-			#Q: does the learn rate decrease per iteration or per batch? paper reads like per iteration, even though that's weird
+			#invalidate costCache
+			costCache = {}
+
+			#does the learn rate decrease per iteration or per batch? paper reads like per iteration, but that's weird
+			#judging from their code they draw exactly one random batch per iteration, i.e. it's per iteration
 			learnRate *= 0.99
 
-		if learnRate < 0.00001:
+			if learnRate < abortRate:
+				break
+
+		if learnRate < abortRate:
 			break
 
 	endTime = datetime.now()
@@ -104,8 +148,11 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 	log.info("Cost with random Q was %f (averaged over all pairs: %f)", startCost, startCost/len(group1)/len(group2))
 	log.info("Final total cost is %f (averaged over all pairs: %f)", totalCost, totalCost/len(group1)/len(group2))
 
-	with open("final_Q.pickle", "wb") as file:
+	with open("final_Q-{}.pickle".format(datetime.now()), "wb") as file:
 		pickle.dump({
+			"parameters": {
+				"alpha": alpha,
+				"batchSize": batchSize},
 			"iterations": iteration,
 			"batches": batchNo,
 			"learnRate": learnRate,
@@ -113,6 +160,45 @@ def seperateDifferentGroups(group1, group2, dimensions = 1):
 			"avgCost": totalCost/len(group1)/len(group2),
 			"Q": Q
 			}, file)
+
+	return Q
+
+
+def checkResults(posVec, negVec, Q = None):
+	if Q is None:
+		Q = np.identity(posVec[0].size)
+
+	pospos=0
+	posneg=0
+	negpos=0
+	negneg=0
+	poszero = 0
+	negzero = 0
+	for vec in posVec:
+		if (Q*vec.reshape(vec.size,1))[(0,0)] > 0:
+			pospos += 1
+		elif (Q*vec.reshape(vec.size,1))[(0,0)] < 0:
+			posneg += 1
+		else:
+			import pdb
+			pdb.set_trace()
+			poszero += 1
+	for vec in negVec:
+		if (Q*vec.reshape(vec.size,1))[(0,0)] > 0:
+			negpos += 1
+		elif (Q*vec.reshape(vec.size,1))[(0,0)] < 0:
+			negneg += 1
+		else:
+			negzero +=1
+
+	print("Positive Words > 0: {}".format(pospos))
+	print("Positive Words < 0: {}".format(posneg))
+	print("Positive Words = 0: {}".format(poszero))
+
+	print("Negative Words > 0: {}".format(negpos))
+	print("Negative Words < 0: {}".format(negneg))
+	print("Negative Words = 0: {}".format(negzero))
+
 
 
 if __name__ == "__main__":
@@ -126,26 +212,44 @@ if __name__ == "__main__":
 
 	try:
 		with open("posVecs.pickle", "rb") as file:
-			posVec = pickle.load(file)
+			posVec, posTestVec = pickle.load(file)
 		with open("negVecs.pickle", "rb") as file:
-			negVec = pickle.load(file)
+			negVec, negTestVec = pickle.load(file)
 		log.info("Loaded vectors")
 	except Exception as e:
 		log.exception(e)
-		model = KeyedVectors.load_word2vec_format("/storage/MA/customVectors/w2v-wiki/w2v.wikipedia-en.cbow.softmax.100d.w2v.gz")
+		model = KeyedVectors.load_word2vec_format("/storage/MA/GoogleNews-vectors-negative300.bin", binary=True)
+		frequentWords = model.index2word[:80000]
 
-		pos = "dedication achieves versatility fellowships recognized excellence refreshments versatility craftsmanship elegance guestrooms approachable celebrates partnering accompanist appreciates appoints toastmasters personable felicitated enthuses welcomes timeless chorale mentors expertise mentorship impressed musicality delighted unfailing honored learnings harmoniously appreciating appreciative volunteerism celebrate versatile unpretentious coachable strives telecompaper qualities recognizes richness intacct scottrade fluent vibrant celebrating dedication congratulate elegant supple talents handcrafted rotarians strived freshness showcasing fellowship honorees adaptability pedometers unrivaled enjoying teamwork honorees doctorate honored appreciation praises gracious volunteerism thank concierge secures stylish fulfills congratulations wonderful thoughtfulness invaluable harmonious commitment unsurpassed elects dedicated eventful visionary gratitude praising acumen concertmaster recognitions horsemanship appreciated accolade uniqueness complement spacious sennheiser affordable passion unparalleled exciting complementing commends congratulations inspiring exemplifies portico musicianship competencies strengths nurturing volunteering trailblazer "
-		neg = "overreaction unsanitary vandalism pileup unhygienic underfunding bungle nooses landslides fester understaffing suffocation abusive stench gutless mixup faulty uncaring scaremongering abusive disgusting mismanagement inconsiderate sickening racist sickens cyberattacks looting firebombed racist libelous filthy gouging inhumane inaction misdiagnosed inaccurate flooding hallucinating kneeing unprofessional stink slur kidnappings xenophobic whiners blowback rioted clashes amok incoherent blamed feces fouls starvation loadshedding spat beatings stagflation unfunny scapegoating insult spygate inept reeked rioting asphyxiated overcrowding yobs uncooperative foul scuffles stabbing paranoid inaccuracy indefensible mishandling bungling fuming harassing irrational unprovoked urinating unpatriotic slurs squalid bungled uncontrollable threatening incompetent taunts tirade faulty vandalism untrustworthy derogatory irresponsible disgraceful urinated vindictiveness bloat disgusted blames festered mistreatment meddling irate malfunctioning harassed infighting fumes wrongheaded mismanaged angry brawl concussions slams lynchings nauseated underreporting desensitized shoddy rancid blaming sores misdiagnosis gangrene injures disorganization cowards unbalanced unfairness scapegoats looting suffocate undisciplined scumbag uninhabitable enraged fouling mistreat mistrial scuffle cramping"
+		posWords = [line[:-1] for line in open("/storage/MA/sentimentLexica/positive-words.txt")
+		                      if not line.startswith(";") and len(line) > 2 and line[:-1] in frequentWords]
+		negWords = [line[:-1] for line in open("/storage/MA/sentimentLexica/negative-words.txt")
+		                      if not line.startswith(";") and len(line) > 2 and line[:-1] in frequentWords]
 
-		posVec = [model[w] for w in pos.split()]
-		negVec = [model[w] for w in neg.split()]
+		random.seed(42)
+		random.shuffle(posWords)
+		random.shuffle(negWords)
+
+		posVec = [model[w] for w in posWords[:200]]
+		negVec = [model[w] for w in negWords[:200]]
+
+		posTestVec = [model[w] for w in posWords[201:401]]
+		negTestVec = [model[w] for w in negWords[201:401]]
 
 		with open("posVecs.pickle", "wb") as file:
-			pickle.dump(posVec, file)
+			pickle.dump((posVec, posTestVec), file)
 		with open("negVecs.pickle", "wb") as file:
-			pickle.dump(negVec, file)
+			pickle.dump((negVec, negTestVec), file)
 
-	# posVec = [np.array([1,  2,  3,  4  ]).reshape(4,1), np.array([5  ,6,  7,  8, ]).reshape(4,1)]
-	# negVec = [np.array([1.5,2.5,3.5,4.5]).reshape(4,1), np.array([5.5,6.5,7.5,8.5]).reshape(4,1)]
+	import sys
+	alpha = float(sys.argv[1])
+	print("Alpha set to " + str(alpha))
 	log.info("Beginning seperation of %d positive and %d negative words", len(posVec), len(negVec))
-	seperateDifferentGroups(posVec, negVec)
+	Q = seperateDifferentGroups(posVec, negVec, alpha=alpha)
+
+	print("Alpha set to " + str(alpha))
+	log.info("Checking results. This is the baseline: ")
+	checkResults(posTestVec, negTestVec)
+	log.info("Checking results. This is the result using the trained Q: ")
+	checkResults(posTestVec, negTestVec, Q)
+
