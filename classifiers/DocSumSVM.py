@@ -11,7 +11,7 @@ from sklearn import svm as SVM
 from sklearn.preprocessing import normalize
 from sklearn.utils.validation import check_is_fitted
 from gensim.models import Word2Vec
-from util import softmax, isAroused
+from util import softmax, isAroused, getImageID
 from util.plot import plotPCA
 from util.containers import LazyModel, TestresultContainer
 from util.classifiers import EmbeddingsClassifier, SVMClassifierMixin
@@ -21,12 +21,13 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 	    and trains an SVM with the result
 	"""
 
-	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False, norm="l2"):
+	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False, norm="l2", useImageID = False):
 		super().__init__(modelPath)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
 		self.norm = norm
 		self.nostopwords = nostopwords
+		self.useImageID = useImageID
 
 	def _generateDescribingVectors(self, filename):
 		"""Vectorizes a file, averages the vectors
