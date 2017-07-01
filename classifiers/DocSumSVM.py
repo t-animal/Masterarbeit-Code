@@ -23,7 +23,6 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 	def __init__(self, modelPath = None, SVM_C = 2.5, gamma = "auto", nostopwords = False, norm="l2"):
 		super().__init__(modelPath)
-		self.min_probability = float(min_probability)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
 		self.norm = norm
@@ -59,11 +58,13 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 			fileSum = np.append(fileSum, stopWordCounter).reshape(1,-1)
 
+		if self.useImageID:
+			fileSum = np.append(fileSum, [getImageID(filename)])
+
 		yield fileSum
 
 	def train(self, trainFilenames):
-		self.trainSVM(trainFilenames, {"probability": self.min_probability > 0,
-		                               "C": self.SVM_C,
+		self.trainSVM(trainFilenames, {"C": self.SVM_C,
 		                               "gamma": self.gamma,
 		                               "class_weight": "balanced"})
 
@@ -87,18 +88,12 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 			distance = self.svm.decision_function([fileSum])[0]
 			testResult.additional(distances = {filename: distance})
+			
+			result = self.svm.predict([fileSum])[0]
+			testResult.addResult(bool(result), isAroused(filename))
 
-			probability = None
-			if self.min_probability > 0:
-				probability = self.svm.predict_proba([fileSum])[0]
-				testResult.additional(probabilities = {filename: [distance, probability[0], probability[1]]})
-
-			if probability is None or any(probability > self.min_probability):
-				result = self.svm.predict([fileSum])[0]
-				testResult.addResult(bool(result), isAroused(filename))
-
-				log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
-				         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT", distance)
+			log.info("Checked file %s, result %s (%s), distance: %s", filename, result,
+			         "CORRECT" if bool(result) == isAroused(filename) else "INCORRECT", distance)
 
 		log.info("Finished testing: %s", testResult.oneline())
 
