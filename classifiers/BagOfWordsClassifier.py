@@ -6,6 +6,8 @@ from util import isAroused
 from util.classifiers import Classifier, SVMClassifierMixin
 from util.containers import TestresultContainer
 
+from gensim.utils import simple_preprocess
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
@@ -29,7 +31,10 @@ class BagOfWordsClassifier(SVMClassifierMixin, Classifier):
 		   :type trainFilenames: iterable of strings
 		"""
 
-		self.vectorizer = TfidfVectorizer(input="filename", ngram_range=self.ngram_range)
+		self.vectorizer = TfidfVectorizer(input="filename", 
+			preprocessor = lambda x: x, #identity function for preprocessor, use simple_preprocess for both
+			tokenizer = simple_preprocess,
+			ngram_range=self.ngram_range)
 		self.vectorizer.fit(trainFilenames)
 
 		self.trainSVM(trainFilenames, {"C": self.SVM_C,
