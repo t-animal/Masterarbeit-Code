@@ -29,7 +29,7 @@ class WMDClassifier(EmbeddingsClassifier):
 		   :returns: numpy array
 		"""
 
-		yield self._vectorizeFile(filename)
+		yield self.removeStopWords(self._vectorizeFile(filename))
 
 	def wmdistanceMetric(self, x, y):
 		document1 = self._getDescribingVectors(self.documents[int(x[0])])
