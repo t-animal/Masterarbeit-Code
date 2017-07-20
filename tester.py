@@ -137,7 +137,7 @@ if __name__ == "__main__":
 	parser.add_argument("--train", help = "The datasets to train on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 	parser.add_argument("--test",  help = "The datasets to test on (overrides any validation sets!)",
-	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()))
+	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 	parser.add_argument("--validate", help = "The datasets to validate on",
 	                               nargs = "+", choices = ChoicesContainer(_dataSets.keys()), default = [])
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 	                level=[log.WARN, log.INFO, log.DEBUG][min(args.v, 2)])
 
 	#Perform sanity checks on the arguments
-	if not (bool(args.train) ^ bool(args.load) or args.plot or args.crossValidate or args.crossTest):
+	if not (bool(args.train) ^ bool(args.load) or args.plot or args.crossValidate):
 		parser.error("Please supply either train or load (and don't supply both) or plot")
 		sys.exit(1)
 
