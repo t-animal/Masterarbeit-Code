@@ -76,7 +76,7 @@ def isAroused(path):
 		return not "E" in filename
 
 	if "PSE_WirthSchultheiss2006" in folder:
-		return "Bridges" in filename
+		return "Bridges" in filename and int(filename[-5]) >= 4
 
 	raise ValueError("Unknown path")
 
@@ -118,12 +118,8 @@ def getImageID(path):
 		return int(filename[-5])
 
 	if "PSE_WirthSchultheiss2006" in folder:
-		#similar to Study2, but first character indicates if story order switched and 8 stories, not 6
-		apparentId = int(filename[-5])
-		if filename[0] == "1":
-			return apparentId
-		else:
-			return (apparentId + 3) % 8 + 1
+		warnings.warn("Story order was randomized in Wirth dataset, we have no information on image ID")
+		return 1
 
 	raise ValueError("Unknown path")
 
