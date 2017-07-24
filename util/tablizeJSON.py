@@ -94,7 +94,7 @@ def getLatexDoc(title, results):
 	doc.packages.append(Package("FiraSans", options=["sfdefault"]))
 	# doc.packages.append(Package("xcolor", options=["dvipsnames"]))
 
-	table = Tabular("l|cccccccc")
+	table = Tabular("l|c" + "c" *len(dataSets))
 
 	table.add_row([" "] + [Rotate(60, x) for x in dataSets] + ["ø"])
 	table.add_hline()
@@ -128,7 +128,7 @@ def getLatexDoc(title, results):
 	doc.append(NewLine())
 	doc.append("Average of best-performing hyperparameters: ")
 	doc.append(bold("{:6.3f}% ± {:6.3f}".format(bestPercentage.mean(), bestPercentage.std())))
-	doc.generate_pdf(clean_tex=True)
+	doc.generate_pdf(clean_tex=False)
 
 
 if __name__ == "__main__":
