@@ -20,7 +20,13 @@ def getAllStories(dataSets):
 			stories += [dataSet + "__" + author + "__" + str(index) for index, _ in enumerate(_resultDict[dataSet][author])]
 	return stories
 
-def generateCrossValidationSets(dataSets, shuffleSeed=42):
+def getAllAuthors(dataSets):
+	authors = []
+	for dataSet in dataSets:
+		authors += [dataSet + "__" + author for author in _resultDict[dataSet]]
+	return authors
+
+def generateCrossValidationSets(dataSets, shuffleSeed=42, stories = True):
 	"""Generates cross validation sets. I.e. all stories from the given data sets are partitioned into 5 sets
 	of 20% test data, and 80% training data. These 80% training data are once more partitioned into
 	N sets of 80% training and 20% validation data. That yields a structure like this:
@@ -40,7 +46,7 @@ def generateCrossValidationSets(dataSets, shuffleSeed=42):
 
 	embeddedCrossvalidationSets = []
 	for dataSet in dataSets:
-		allFiles = getAllStories([dataSet])
+		allFiles = getAllStories([dataSet]) if stories else getAllAuthors([dataSet])
 		allAroused = list(filter(lambda x: isAroused(x), allFiles))
 		allNonAroused = list(filter(lambda x: not isAroused(x), allFiles))
 
@@ -93,7 +99,7 @@ def generateCrossValidationSets(dataSets, shuffleSeed=42):
 
 	return embeddedCrossvalidationSets
 
-class ThresholdingClassifier():
+class StoryThresholdingClassifier():
 
 	def _getWinterImageCount(self, storyId):
 			dataSet, author, index = storyId.split("__")
@@ -106,7 +112,6 @@ class ThresholdingClassifier():
 		weightAroused = len(storyIds)/2/len(list(filter(isAroused, storyIds)))
 		weightControl = len(storyIds)/2/len(list(filterfalse(isAroused, storyIds)))
 
-		#going in .5 steps means we don't have to care
 		for threshold in range(0,15):
 			curCorrect = 0
 			for storyId in storyIds:
@@ -131,12 +136,49 @@ class ThresholdingClassifier():
 		return testResult
 
 
-def performCV(dataSets, reshuffle = True):
-	classifier = ThresholdingClassifier()
+class AuthorThresholdingClassifier():
 
-	generatedSets = generateCrossValidationSets(dataSets, 42)
+	def _getWinterImageCount(self, authorId):
+			dataSet, author = authorId.split("__")
+			return sum(_resultDict[dataSet][author])/len(_resultDict[dataSet][author])
+
+
+	def train(self, authorIds):
+		bestThreshold = -1
+		bestCorrect = -1
+		weightAroused = len(authorIds)/2/len(list(filter(isAroused, authorIds)))
+		weightControl = len(authorIds)/2/len(list(filterfalse(isAroused, authorIds)))
+
+		for threshold in [x/100 for x in range(0,1500, 10)]:
+			curCorrect = 0
+			for authorId in authorIds:
+				result = self._getWinterImageCount(authorId) > threshold
+				if result == isAroused(authorId):
+					curCorrect += weightAroused if isAroused(authorId) else weightControl
+
+			if curCorrect > bestCorrect:
+				bestThreshold = threshold
+				bestCorrect = curCorrect
+
+		self.threshold = bestThreshold
+
+
+	def test(self, authorIds):
+		testResult = TestresultContainer(True, False, "aroused", "nonAroused")
+
+		for authorId in authorIds:
+			result = self._getWinterImageCount(authorId) > self.threshold
+			testResult.addResult(result, isAroused(authorId))
+
+		return testResult
+
+
+def performCV(dataSets, reshuffle = True, stories = True):
+	classifier = StoryThresholdingClassifier() if stories else AuthorThresholdingClassifier()
+
+	generatedSets = generateCrossValidationSets(dataSets, 42, stories)
 	if reshuffle:
-		generatedSets += generateCrossValidationSets(dataSets, 23)
+		generatedSets += generateCrossValidationSets(dataSets, 23, stories)
 
 	result = CrossValidationResultContainer("aroused", "nonAroused")
 
@@ -157,6 +199,7 @@ _resultDict = \
 if __name__ == "__main__":
 	import os, sys
 
+	print("Optimizing a threshold to separate stories in the range of 0 to 15 images per story in steps of 1")
 	for dataset in _resultDict.keys():
 		result = performCV([dataset])
 		print("Best result after optimization of Threshold on {}".format(dataset))
@@ -166,3 +209,17 @@ if __name__ == "__main__":
 			print(result.oneline())
 		print(result)
 		print("")
+	
+	print("")
+
+	print("Optimizing a threshold to separate authors in the range of 0 images per story to 15 images per story and author in steps of 0.1")
+	for dataset in _resultDict.keys():
+		result = performCV([dataset], stories = False)
+		print("Best result after optimization of Threshold on {}".format(dataset))
+		if os.isatty(sys.stdout.fileno()):
+			print("\033[1m" + result.oneline() + "\033[0m")
+		else:
+			print(result.oneline())
+		print(result)
+		print("")
+	
