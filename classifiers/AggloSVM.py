@@ -43,7 +43,7 @@ class AgglomerativeClusterSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier
 		else:
 			vectorizedFile = self._vectorizeFile(filename)
 
-		clusterer = AgglomerativeClustering(n_clusters = self.k)
+		clusterer = AgglomerativeClustering(n_clusters = self.k, affinity = "cosine", linkage="average")
 		clusterer.fit([v for t,v in vectorizedFile])
 
 		# import pdb
