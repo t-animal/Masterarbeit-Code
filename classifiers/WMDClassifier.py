@@ -32,10 +32,11 @@ class WMDClassifier(EmbeddingsClassifier):
 		yield self.removeStopWords(self._vectorizeFile(filename))
 
 	def wmdistanceMetric(self, x, y):
-		document1 = self._getDescribingVectors(self.documents[int(x[0])])
-		document2 = self._getDescribingVectors(self.documents[int(y[0])])
+		document1 = list(self._getDescribingVectors(self.documents[int(x[0])])[0])
+		document2 = list(self._getDescribingVectors(self.documents[int(y[0])])[0])
 
 		distance = self.distanceCalculator.wmdistance(document1, document2)
+		# distance = self.model.wmdistance([w for w,v in document1], [w for w,v in document2])
 		# print("{}->{}: {}".format(os.path.basename(self.documents[int(x[0])]), os.path.basename(self.documents[int(y[0])]), distance))
 		return distance
 

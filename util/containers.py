@@ -287,10 +287,12 @@ class CachedKeyedVectors:
 		:type document2: a list of tuples (word token, vector)
 		"""
 
-		self.vocabulary = {k:v for words in document1 + document2 for k,v in words + list(self.vocabulary.items())}
+		newWords = document1 + document2
 
-		document1Words = [word for words in document1 for word, vector in words]
-		document2Words = [word for words in document2 for word, vector in words]
+		self.vocabulary = {k:v for k,v in newWords + list(self.vocabulary.items())}
+
+		document1Words = [word for word, vector in document1]
+		document2Words = [word for word, vector in document2]
 		return KeyedVectors.wmdistance(self, document1Words, document2Words)
 
 
