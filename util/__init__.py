@@ -75,8 +75,8 @@ def isAroused(path):
 	if "McClelland_et_al_nAch_cleaned" in folder:
 		return not "E" in filename
 
-	if "PSE_WirthSchultheiss2006" in folder:
-		return "Bridges" in filename and int(filename[-5]) >= 4
+	if "PSE_WirthSchultheiss2006" in folder or "WirthDiff" in folder or "WirthSame" in folder:
+		return "Bridges" in filename and int(filename[-5]) > 4
 
 	raise ValueError("Unknown path")
 
@@ -117,7 +117,7 @@ def getImageID(path):
 		warnings.warn("Using image ID for the McClelland dataset is speculative!")
 		return int(filename[-5])
 
-	if "PSE_WirthSchultheiss2006" in folder:
+	if "PSE_WirthSchultheiss2006" in folder or "WirthDiff" in folder or "WirthSame" in folder:
 		warnings.warn("Story order was randomized in Wirth dataset, we have no information on image ID")
 		return 1
 
