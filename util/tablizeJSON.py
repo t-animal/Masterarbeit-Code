@@ -32,8 +32,8 @@ def light(s, *, escape=True):
 
 def getAllResults(folder):
 	allResults = defaultdict(dict)
-	prefixLen = len("testOutput_")
 	for fileName in filter(lambda x: x.endswith("json"), os.listdir(folder)):
+		prefixLen = fileName.index("_") + 1
 		key = fileName[prefixLen:fileName.index("_", prefixLen)]
 		dataset = fileName[prefixLen + len(key) + 1:-5]
 
@@ -124,7 +124,7 @@ def getLatexDoc(title, results):
 	centeredTable.append(table)
 	doc.append(centeredTable)
 	doc.append(VerticalSpace("1em"))
-	doc.append("Results of 5-fold stratified nested cross validation on various datasets using the given classifier.")
+	doc.append("Results of two times 5-fold stratified nested cross validation on various datasets using the given classifier.")
 	doc.append(NewLine())
 	doc.append("Average of best-performing hyperparameters: ")
 	doc.append(bold("{:6.3f}% ± {:6.3f}".format(bestPercentage.mean(), bestPercentage.std())))
