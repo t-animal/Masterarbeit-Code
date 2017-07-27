@@ -25,7 +25,7 @@ class KMeansSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 
 	def __init__(self, modelPath = None, k = 5, SVM_C = 2.5, gamma = "auto", nostopwords = False, norm="l2"):
 		super().__init__(modelPath)
-		self.k = int(5)
+		self.k = int(k)
 		self.SVM_C = float(SVM_C)
 		self.gamma = "auto" if gamma == "auto" else float(gamma)
 		self.nostopwords = nostopwords
