@@ -60,6 +60,7 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 		args = pickle.loads(pickled)
 
 		log.info("Received computation request: {}({}) on {}".format(args[0], args[2], args[1]))
+		self.server.pendingJobs += 1
 
 		result = self.server.pool.apply_async(self.server.workerFunction, (args,))
 
@@ -75,6 +76,9 @@ class ExecutionRequestHandler(socketserver.BaseRequestHandler):
 
 			if result.ready():
 				break
+
+		self.server.pendingJobs -= 1
+		log.info("Done. %d jobs pending", self.server.pendingJobs)
 
 		try:
 			result = {"result": result.get(), "exception": None}
@@ -110,6 +114,7 @@ class ExecutionRequestServer(socketserver.ThreadingMixIn, socketserver.TCPServer
 		self.n_cpus = n_cpus
 		self.workerFunction = workerFunction
 		self.pool = multiprocessing.Pool(n_cpus)
+		self.pendingJobs = 0
 		self.poolEpoch = 0
 		self.terminationLock = threading.Lock()
 
@@ -127,6 +132,7 @@ class ExecutionRequestServer(socketserver.ThreadingMixIn, socketserver.TCPServer
 			self.pool.terminate()
 			self.pool.join()
 			self.pool = multiprocessing.Pool(self.n_cpus)
+			self.pendingJobs = 0
 			self.poolEpoch += 1
 
 	@staticmethod
