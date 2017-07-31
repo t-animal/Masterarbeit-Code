@@ -172,9 +172,11 @@ def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alp
 	return Q
 
 
-def trainWithNegativeSampling(positiveWordList, model, alpha=0.8):
+def trainWithNegativeSampling(positiveWordList, model, alpha=0.8, frequentWords = None):
 
-	frequentWords = model.index2word[:80000]
+	if not frequentWords:
+		frequentWords = model.index2word[:80000]
+
 	positiveVectors = [model[w] for w in positiveWordList if w in model and w in frequentWords]
 
 	random.seed(42)
@@ -189,7 +191,7 @@ def trainWithNegativeSampling(positiveWordList, model, alpha=0.8):
 
 	seperateDifferentGroups(positiveVectors, negativeVectors, alpha=alpha)
 
-def readLIWCList(fileName, categories, model = None, isGlove = False):
+def readLIWCList(fileName, categories, model = None, frequentWords = None):
 	""" Reads a LUIC list and extracts all words contained in the given categories.
 	    If model is given, words contained in the 800000 most frequent words in the model
 		are used to expand a prefix-word (ending with a *). E.g. "love*" will be expanded
@@ -204,8 +206,8 @@ def readLIWCList(fileName, categories, model = None, isGlove = False):
 		:param model: if supplied, use the words in this model to expand an asterisk
 		:type model: gensim.models.KeyedVectors
 
-		:param isGlove: must be set to true, when the model was trained using glove
-		:type isGlove: bool
+		:param frequentWords: must be set to when the model was trained using glove; the 80.000 most frequent words from the training corpus
+		:type frequentWords: list of strings
 	"""
 
 	log.info("Start")
@@ -214,13 +216,8 @@ def readLIWCList(fileName, categories, model = None, isGlove = False):
 	toBeExpanded = []
 	words = []
 
-	if model:
-		frequentWords = model.index2word[:80000]
-		if isGlove:
-			# glove embeddings are not sorted by frequency
-			frequentWords = model.index2word
-	else:
-		frequentWords = []
+	if not frequentWords and model:
+			frequentWords = model.index2word[:80000]
 
 	with open(fileName) as file:
 		for line in file:
@@ -237,7 +234,7 @@ def readLIWCList(fileName, categories, model = None, isGlove = False):
 
 			if requestedCategories.intersection(wordCategories):
 				if not word[-1] == "*":
-					if model and word in frequentWords:
+					if frequentWords and word in frequentWords:
 						words.append(word)
 					continue
 					
@@ -246,7 +243,7 @@ def readLIWCList(fileName, categories, model = None, isGlove = False):
 
 				toBeExpanded.append(word)
 
-	if model:
+	if frequentWords:
 		for modelWord in frequentWords:
 			if not "_" in modelWord and any(modelWord.startswith(word[:-1]) for word in toBeExpanded):
 				words.append(modelWord)
@@ -254,12 +251,9 @@ def readLIWCList(fileName, categories, model = None, isGlove = False):
 	log.info("End")
 	return words
 
-def getSentimentWords(positiveFilename, negativeFilename, model, isGlove = False):
-	frequentWords = model.index2word[:80000]
-
-	if isGlove:
-		# glove embeddings are not sorted by frequency
-		frequentWords = model.index2word
+def getSentimentWords(positiveFilename, negativeFilename, model, frequentWords = None):
+	if not frequentWords:
+		frequentWords = model.index2word[:80000]
 
 	posWords = [line[:-1] for line in open(positiveFilename)
 	                      if not line.startswith(";") and len(line) > 2 and line[:-1] in frequentWords]
@@ -323,7 +317,7 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Use LIWC dictionary/sentiment lists to train ultradense subspaces')
 	parser.add_argument("--modelPath", "-m", help="Path to word2vec model", required=True)
-	parser.add_argument("--isGloveModel", "-g", help="Must be specified when model was created using glove", action="store_true", default=False)
+	parser.add_argument("--frequentWords", "-f", help="Must be specified when model was created using glove; file with the 80000 most frequent words of the trained corpus; one word per line", default=None)
 	parser.add_argument("--alpha", "-a", help="Weighting parameter", type=float, default=0.8)
 	parser.add_argument("--liwcDict", "-d", help="Path to liwc dictionary", default=None)
 	parser.add_argument("--liwcCat", "-c", help="List of liwc categories to use as positive samples", nargs="+", type=int, default=None)
@@ -333,6 +327,12 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	args.doLIWC = args.liwcDict and args.liwcCat
 	args.doSent = args.pos and args.neg
+
+	if args.frequentWords:
+		with open(args.frequentWords, "r") as f:
+			frequentWords = [line[:-1] for line in f]
+	else:
+		frequentWords = None
 
 	if args.doLIWC:
 		print("Performing optimization on LIWC dictionary categories")
@@ -348,13 +348,13 @@ if __name__ == "__main__":
 
 	if args.doLIWC:
 		log.info("Beginning training on liwc category")
-		words = readLIWCList(args.liwcDict, args.liwcCat, model, args.isGloveModel)
+		words = readLIWCList(args.liwcDict, args.liwcCat, model, frequentWords)
 
 		log.info("Category words collected, begin training")
-		trainWithNegativeSampling(words, model, alpha=args.alpha)
+		trainWithNegativeSampling(words, model, alpha=args.alpha, frequentWords=frequentWords)
 
 	if args.doSent:
-		(posVec, negVec), (posTestVec, negTestVec) = getSentimentWords(args.pos, args.neg, model, args.isGloveModel)
+		(posVec, negVec), (posTestVec, negTestVec) = getSentimentWords(args.pos, args.neg, model, frequentWords)
 
 		Q = seperateDifferentGroups(posVec, negVec, alpha=args.alpha)
 
