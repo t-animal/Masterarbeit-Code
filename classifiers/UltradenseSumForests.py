@@ -5,7 +5,7 @@ import pdb
 import pickle
 import re
 
-from DocSumRandomForests import DocSumRandomForestsClassifier
+from .DocSumRandomForests import DocSumRandomForestsClassifier
 
 class UltradenseSumRandomForests(DocSumRandomForestsClassifier):
 	""" A very simple classifier: It vectorizes a file, averages up all word vectors
