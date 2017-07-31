@@ -177,17 +177,18 @@ class ExecutionRequestMaster:
 		try:
 			sock = socket.create_connection((worker, self.workersPort), 5)
 			set_keepalive_linux(sock, max_fails = 20) # not platform independant, could be deleted if your NAT is not as shitty as mine
+
+			salt = sock.recv(64)
+			authcode = hashlib.pbkdf2_hmac("sha512", self.secret.encode("ascii"), salt, N_ROUNDS)
+
+			sock.sendall(binascii.hexlify(authcode))
+
+			if not sock.recv(1) == _signals.OK:
+				log.warning("Could not authenticate on worker %s", worker)
+				return None
+			
 		except Exception as e:
 			log.debug(e)
-			return None
-
-		salt = sock.recv(64)
-		authcode = hashlib.pbkdf2_hmac("sha512", self.secret.encode("ascii"), salt, N_ROUNDS)
-
-		sock.sendall(binascii.hexlify(authcode))
-
-		if not sock.recv(1) == _signals.OK:
-			log.warning("Could not authenticate on worker %s", worker)
 			return None
 
 		#authenticated, adding to list
