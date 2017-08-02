@@ -102,7 +102,7 @@ def checkForAll(dataSetsList):
 
 def printResult(result, json, train, trainFiles, validate, test=None):
 	if not json:
-		if test is not None:
+		if test:
 			print("Results for training on {} ({}, {} aroused, {} not) and testing on {}".
 					format(train, len(trainFiles), len(list(filter(isAroused, trainFiles))),
 					       len(list(filter(lambda x: not isAroused(x), trainFiles))), test))
