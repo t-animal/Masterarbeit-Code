@@ -222,7 +222,7 @@ def generateTrainAndValidateset(trainSets, validateSets, validatePercentage=20):
 		trainFiles += filter(lambda x: x not in validateFiles, allAroused[:int(percentage * len(allFiles) / 100 / 2)])
 		trainFiles += filter(lambda x: x not in validateFiles, allNonAroused[:int(percentage * len(allFiles) / 100 / 2)])
 
-	if not any(map(lambda x: x.endswith(".all"), trainSets + validateSets)):
+	if not any(map(lambda x: x.endswith(".all"), list(trainSets) + list(validateSets))):
 		#assert no validatefiles are also trainfiles
 		assert(set(trainFiles) - set(validateFiles) == set(trainFiles))
 		#assert an equal amount of aroused and non-aroused validatefiles
