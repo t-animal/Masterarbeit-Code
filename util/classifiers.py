@@ -273,6 +273,9 @@ class SVMClassifierMixin:
 		for filename in testFilenames:
 			feature = self._getDescribingVectors(filename)[0].flatten()
 
+			distance = self.svm.decision_function([feature])[0]
+			testResult.additional(distances = {filename: distance})
+
 			result = self.svm.predict([feature])[0]
 			testResult.addResult(bool(result), isAroused(filename))
 
