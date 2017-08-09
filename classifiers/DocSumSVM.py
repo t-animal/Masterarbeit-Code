@@ -60,7 +60,8 @@ class DocSumSVMClassifier(SVMClassifierMixin, EmbeddingsClassifier):
 			fileSum = np.append(fileSum, stopWordCounter).reshape(1,-1)
 
 		if self.useImageID:
-			fileSum = np.append(fileSum, [getImageID(filename)])
+			divideBy = 0 #set manually to a value that fits this dimension into the others' range
+			fileSum = np.append(fileSum, [getImageID(filename)/divideBy])
 
 		yield fileSum
 
