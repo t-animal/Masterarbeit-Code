@@ -30,7 +30,7 @@ def batches(iterable, batchSize = 300):
 	if len(batch) > 0:
 		yield batch
 
-def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alpha = 0.8):
+def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alpha = 0.8, filename = None):
 	"""Equation (3), used to minimize (and maximize) distance of groups of words of (opposing) meaning in a subspace.
 	   The words to which the word vectors in the groups correspond must have opposing meaning with regard to the desired
 	   information
@@ -54,6 +54,9 @@ def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alp
 	#and add some space around it
 	learnRate = 5 * 0.22 #paper starts at 5, but that's very inefficient, and this implementation is horribly inefficient, so prune that
 	abortRate = 5 * 0.008 #at which learning rate to abort
+
+	print("will safe to: ")
+	print(filename)
 
 	assert(group1 and group2)
 	assert(group1[0].size == group2[0].size)
@@ -99,7 +102,9 @@ def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alp
 
 	random.seed(42)
 	startTime = datetime.now()
-	startCost = sum(starmap(costFunction, itertools.product(group1, group2)))
+	startBetweenCost = sum(starmap(costFunction, itertools.product(group1, group2)))
+	startInnerCost1 = sum(starmap(costFunction, itertools.product(group1, group1)))
+	startInnerCost2 = sum(starmap(costFunction, itertools.product(group2, group2)))
 	batchCount = 0
 	for iteration in itertools.count(1):
 		LDiffGroup = list(itertools.product(group1, group2))
@@ -150,13 +155,21 @@ def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alp
 			break
 
 	endTime = datetime.now()
-	totalCost = sum(starmap(costFunction, itertools.product(group1, group2)))
+	totalBetweenCost = sum(starmap(costFunction, itertools.product(group1, group2)))
+	totalInnerCost1 = sum(starmap(costFunction, itertools.product(group1, group1)))
+	totalInnerCost2 = sum(starmap(costFunction, itertools.product(group2, group2)))
 	log.info("Terminating at after %d iterations over %d batches with termanation learnRate %f.", iteration, batchCount, learnRate)
 	log.info("Training took %s", endTime - startTime)
-	log.info("Between-group cost with random Q was %f (higher is better) (averaged over all pairs: %f)", startCost, startCost/len(group1)/len(group2))
-	log.info("Final between-group cost is %f (higher is better) (averaged over all pairs: %f)", totalCost, totalCost/len(group1)/len(group2))
+	log.info("Between-group cost with random Q was       %f (higher is better) (averaged over all pairs: %f)", startBetweenCost, startBetweenCost/len(group1)/len(group2))
+	log.info("In-group cost in group 1 with random Q was %f (lower  is better) (averaged over all pairs: %f)", startInnerCost1, startInnerCost1/len(group1)/len(group1))
+	log.info("In-group cost in group 2 with random Q was %f (lower  is better) (averaged over all pairs: %f)", startInnerCost2, startInnerCost2/len(group1)/len(group1))
+	log.info("Final between-group cost is       %f (higher is better) (averaged over all pairs: %f)", totalBetweenCost, totalBetweenCost/len(group1)/len(group2))
+	log.info("Final in-group in group 1 cost is %f (lower  is better) (averaged over all pairs: %f)", totalInnerCost1, totalInnerCost1/len(group1)/len(group1))
+	log.info("Final in-group in group 2 cost is %f (lower  is better) (averaged over all pairs: %f)", totalInnerCost2, totalInnerCost2/len(group2)/len(group2))
 
-	with open("final_Q-{}.pickle".format(datetime.now()), "wb") as file:
+	if not filename:
+		filename = "final_Q-{}.pickle".format(datetime.now())
+	with open(filename, "wb") as file:
 		pickle.dump({
 			"parameters": {
 				"alpha": alpha,
@@ -164,12 +177,17 @@ def seperateDifferentGroups(group1, group2, dimensions = 1, batchSize = 300, alp
 			"iterations": iteration,
 			"batches": batchNo,
 			"learnRate": learnRate,
-			"totalCost": totalCost,
-			"avgCost": totalCost/len(group1)/len(group2),
+			"totalBetweenCost": totalBetweenCost,
+			"totalInnerCost1": totalInnerCost1,
+			"totalInnerCost2": totalInnerCost2,
+			"avgBetweenCost": totalBetweenCost/len(group1)/len(group2),
+			"avgInnerCost1": totalInnerCost1/len(group1)/len(group1),
+			"avgInnerCost2": totalInnerCost2/len(group2)/len(group2),
 			"Q": Q
 			}, file)
 
 	return Q
+
 
 
 def trainWithNegativeSampling(positiveWordList, model, alpha=0.8, frequentWords = None):
@@ -190,6 +208,7 @@ def trainWithNegativeSampling(positiveWordList, model, alpha=0.8, frequentWords 
 			negativeVectors.append(model[newWord])
 
 	seperateDifferentGroups(positiveVectors, negativeVectors, alpha=alpha)
+
 
 def readLIWCList(fileName, categories, model = None, frequentWords = None):
 	""" Reads a LUIC list and extracts all words contained in the given categories.
@@ -312,6 +331,7 @@ def checkResults(posVec, negVec, Q = None):
 if __name__ == "__main__":
 
 	import argparse
+	import os
 	import pickle
 	from gensim.models import KeyedVectors
 
@@ -351,7 +371,8 @@ if __name__ == "__main__":
 		words = readLIWCList(args.liwcDict, args.liwcCat, model, frequentWords)
 
 		log.info("Category words collected, begin training")
-		trainWithNegativeSampling(words, model, alpha=args.alpha, frequentWords=frequentWords)
+		trainWithNegativeSampling(words, model, alpha=args.alpha, frequentWords=frequentWords,
+			filename=os.path.split(args.modelPath)[-1]+"--"+str(args.liwcCat)+".pickle")
 
 	if args.doSent:
 		(posVec, negVec), (posTestVec, negTestVec) = getSentimentWords(args.pos, args.neg, model, frequentWords)
