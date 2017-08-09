@@ -90,11 +90,15 @@ def plotVectorList(class1, class2=None):
 	plt.xlabel("Texts in Dataset")
 	plt.ylabel("Entries in vector")
 
-	# plt.savefig("../vortraege/antrittsvortrag/images/Veroff_pow2_glove_wns+.png", dpi=600)
+	plt.savefig("../ausarbeitung/images/meh.pdf")
 	plt.show()
 
 
 def plotPCA(class1, class2, class1Label, class2Label, nDims=2):
+	#do weird reshaping for legacy reasons. from now on all vectors should have the same shape
+	class1 = [np.array(v).reshape(max(v.shape)) for v in class1]
+	if class2:
+		class2 = [np.array(v).reshape(max(v.shape)) for v in class2]
 	if nDims == 2:
 		plot2D(class1, class2, class1Label, class2Label, PCA)
 	elif nDims == 3:
